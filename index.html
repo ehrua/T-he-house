@@ -40,7 +40,6 @@
 
 <script>
 let timeout = null;
-let chance = 2;
 
 function clearTimer() {
     if (timeout) {
@@ -49,54 +48,62 @@ function clearTimer() {
     }
 }
 
-function startDeathTimer() {
+function showText(text) {
     clearTimer();
-    timeout = setTimeout(() => {
-        showText("문이 열린다.<br>\"깨어 있었네?\"", true);
-        showChoices([
-            { text: "사망", action: death }
-        ]);
-    }, 5000);
-}
-
-function showText(text, danger = false) {
     const game = document.getElementById("game");
-    game.innerHTML = `<p ${danger ? 'class="dead"' : ""}>${text}</p>`;
+    game.innerHTML = `<p>${text}</p>`;
 }
 
-function showChoices(choices, timed = false) {
+function showChoices(choices) {
     const game = document.getElementById("game");
     choices.forEach(c => {
         const btn = document.createElement("button");
         btn.className = "choice";
         btn.innerText = c.text;
-        btn.onclick = () => {
-            clearTimer();
-            c.action();
-        };
+        btn.onclick = c.action;
         game.appendChild(btn);
     });
-    if (timed) startDeathTimer();
 }
 
-function death() {
-    showText("의식이 끊긴다.<br><br>사망했다.", true);
+function death(text = "의식이 끊긴다.<br><br>사망했다.") {
+    clearTimer();
+    showText(`<span class="dead">${text}</span>`);
 }
 
-function startGame() {
+// ====== 타이머가 필요한 구간에서만 호출 ======
+function startDangerCountdown(onFail) {
+    clearTimer();
+    timeout = setTimeout(() => {
+        onFail();
+    }, 5000);
+}
+
+// ================== 게임 흐름 ==================
+
+function intro1() {
     showText(
         "여느 날과 같은 새벽이다.<br>" +
         "대인 기피증 때문에 사람이 없는 새벽에 강아지 산책을 나왔다.<br>" +
-        "퍽 소리와 함께 기억을 잃었다.<br><br>" +
+        "퍽 소리와 함께 기억을 잃었다."
+    );
+    showChoices([
+        { text: "다음", action: intro2 }
+    ]);
+}
+
+function intro2() {
+    showText(
         "눈을 떠보니 어느 집이다.<br>" +
         "창문은 모두 신문지와 나무 판자로 막혀 있다."
     );
     showChoices([
         { text: "나간다", action: lockedDoor },
         { text: "방을 살핀다", action: searchRoom },
-        { text: "대기한다", action: wait }
+        { text: "대기한다", action: waitNormally }
     ]);
 }
+
+// ================== 초기 방 ==================
 
 function lockedDoor() {
     showText("문이 열리지 않는다. 잠겨 있는 듯하다.<br>열쇠를 찾아야겠다.");
@@ -107,8 +114,23 @@ function lockedDoor() {
     ]);
 }
 
+function searchRoom() {
+    showText(
+        "바닥에서 문서를 발견했다.<br><br>" +
+        "이름: 판태현<br>" +
+        "나이: 30<br>" +
+        "장기 상태: 간 양호 / 신장 양호 / 각막 양호…<br><br>" +
+        "아마 나를 납치해 장기 매매를 하려는 것 같다."
+    );
+    showChoices([
+        { text: "침대 밑", action: corpse },
+        { text: "서랍", action: tweezers },
+        { text: "옷장", action: closet }
+    ]);
+}
+
 function corpse() {
-    showText("사람 같은 것이 있다.<br>시체인 듯하다.");
+    showText("침대 밑에 사람 같은 것이 있다.<br>시체인 듯하다.");
     backToRoom();
 }
 
@@ -125,34 +147,36 @@ function closet() {
 function backToRoom() {
     showChoices([
         { text: "방을 살핀다", action: searchRoom },
-        { text: "대기한다", action: wait }
+        { text: "대기한다", action: waitNormally }
     ]);
 }
 
-function searchRoom() {
+// ================== 대기 (안전 버전) ==================
+
+function waitNormally() {
     showText(
-        "바닥에서 문서를 발견했다.<br><br>" +
-        "이름: 판태현<br>" +
-        "나이: 30<br>" +
-        "장기 상태: 간 양호 / 신장 양호 / 각막 양호…<br><br>" +
-        "아마 장기 매매를 하려는 것 같다."
+        "가만히 숨을 죽인다.<br>" +
+        "집 안은 이상할 정도로 조용하다."
     );
     showChoices([
-        { text: "침대 밑", action: corpse },
-        { text: "서랍", action: tweezers },
-        { text: "옷장", action: closet }
+        { text: "그만 대기한다", action: intro2 }
     ]);
 }
 
-function wait() {
-    showText("시간이 흐른다…<br>발소리가 들린다.", true);
+// ================== 위험한 대기 (나중에 사용) ==================
+// 이 함수는 '발소리 들림' 같은 상황에서만 쓸 것
+function waitDangerously() {
+    showText("발소리가 들린다.<br>점점 가까워진다…");
+    startDangerCountdown(() => {
+        death("문이 열린다.<br>\"깨어 있었네?\"");
+    });
     showChoices([
-        { text: "가만히 있는다", action: death }
-    ], true);
+        { text: "가만히 있는다", action: () => death("그가 문을 열었다.") }
+    ]);
 }
 
-// 게임 시작
-startGame();
+// 시작
+intro1();
 </script>
 
 </body>
