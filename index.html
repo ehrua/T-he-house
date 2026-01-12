@@ -4,179 +4,151 @@
 <meta charset="UTF-8">
 <title>탈출</title>
 <style>
-    body {
-        background: #000;
-        color: #eee;
-        font-family: "Noto Sans KR", sans-serif;
-        padding: 40px;
-        line-height: 1.8;
-    }
-    #game {
-        max-width: 800px;
-        margin: auto;
-    }
-    .choice {
-        display: block;
-        margin: 10px 0;
-        padding: 12px;
-        background: #111;
-        border: 1px solid #444;
-        color: #eee;
-        cursor: pointer;
-        text-align: left;
-    }
-    .choice:hover {
-        background: #222;
-    }
-    .dead {
-        color: #ff4d4d;
-        font-weight: bold;
-    }
+body {
+  background:#000;
+  color:#eee;
+  font-family: monospace;
+  padding: 20px;
+}
+button {
+  margin-top: 10px;
+  padding: 8px 14px;
+  background:#222;
+  color:#eee;
+  border:1px solid #555;
+  cursor:pointer;
+}
+button:hover {
+  background:#444;
+}
+#choices button {
+  display:block;
+}
 </style>
 </head>
+
 <body>
 
-<div id="game"></div>
+<div id="text"></div>
+<div id="choices"></div>
+
+<audio id="footstep" src="footstep.mp3"></audio>
 
 <script>
-let timeout = null;
+let state = "intro";
+let hasPinset = false;
+let choiceMade = false;
+let deathTimer = null;
 
-function clearTimer() {
-    if (timeout) {
-        clearTimeout(timeout);
-        timeout = null;
-    }
+const text = document.getElementById("text");
+const choices = document.getElementById("choices");
+const footstep = document.getElementById("footstep");
+
+function clearAll() {
+  choices.innerHTML = "";
+  choiceMade = false;
+  if (deathTimer) {
+    clearTimeout(deathTimer);
+    deathTimer = null;
+  }
 }
 
-function showText(text) {
-    clearTimer();
-    const game = document.getElementById("game");
-    game.innerHTML = `<p>${text}</p>`;
+function intro() {
+  clearAll();
+  text.innerHTML = `
+여느 날과 같은 새벽이다.<br>
+대인 기피증 때문에 사람이 없는 새벽에 강아지 산책을 나왔다.<br>
+퍽— 소리와 함께 기억을 잃었다.
+  `;
+  addChoice("다음", wakeUp);
 }
 
-function showChoices(choices) {
-    const game = document.getElementById("game");
-    choices.forEach(c => {
-        const btn = document.createElement("button");
-        btn.className = "choice";
-        btn.innerText = c.text;
-        btn.onclick = c.action;
-        game.appendChild(btn);
-    });
+function wakeUp() {
+  clearAll();
+  text.innerHTML = `
+눈을 떠보니 어느 집이다.<br>
+창문은 모두 신문지와 나무 판자로 막혀 있다.
+  `;
+  addChoice("거실을 살핀다", noiseEvent);
 }
 
-function death(text = "의식이 끊긴다.<br><br>사망했다.") {
-    clearTimer();
-    showText(`<span class="dead">${text}</span>`);
+function noiseEvent() {
+  clearAll();
+  text.innerHTML = `
+인기척이 들린다.<br>
+천천히, 발소리가 가까워진다…
+  `;
+  footstep.play();
+
+  addChoice("주방으로 숨는다", death);
+  addChoice("지하실로 숨는다", death);
+  addChoice("화장실로 숨는다", bathroom);
+
+  // 5초 안에 선택 안 하면 사망
+  deathTimer = setTimeout(() => {
+    if (!choiceMade) death();
+  }, 5000);
 }
 
-// ====== 타이머가 필요한 구간에서만 호출 ======
-function startDangerCountdown(onFail) {
-    clearTimer();
-    timeout = setTimeout(() => {
-        onFail();
-    }, 5000);
+function bathroom() {
+  choiceMade = true;
+  clearAll();
+  text.innerHTML = `
+화장실이다.<br>
+숨을 곳을 골라야 한다.
+  `;
+  addChoice("욕조 안", surviveBathroom);
+  addChoice("변기 뒤", death);
+  addChoice("세면대 아래", death);
 }
 
-// ================== 게임 흐름 ==================
-
-function intro1() {
-    showText(
-        "여느 날과 같은 새벽이다.<br>" +
-        "대인 기피증 때문에 사람이 없는 새벽에 강아지 산책을 나왔다.<br>" +
-        "퍽 소리와 함께 기억을 잃었다."
-    );
-    showChoices([
-        { text: "다음", action: intro2 }
-    ]);
+function surviveBathroom() {
+  clearAll();
+  text.innerHTML = `
+욕조 안에 몸을 숨겼다.<br>
+발소리는 지나간 것 같다…<br><br>
+욕실 서랍에서 핀셋을 발견했다.
+  `;
+  hasPinset = true;
+  addChoice("거실로 나온다", doorCheck);
 }
 
-function intro2() {
-    showText(
-        "눈을 떠보니 어느 집이다.<br>" +
-        "창문은 모두 신문지와 나무 판자로 막혀 있다."
-    );
-    showChoices([
-        { text: "나간다", action: lockedDoor },
-        { text: "방을 살핀다", action: searchRoom },
-        { text: "대기한다", action: waitNormally }
-    ]);
+function doorCheck() {
+  clearAll();
+  text.innerHTML = `
+현관문이다.<br>
+잠겨 있다.
+  `;
+  addChoice("문을 연다", () => {
+    clearAll();
+    text.innerHTML = `
+문은 열리지 않는다.<br>
+열쇠와 비밀번호가 필요해 보인다.
+    `;
+    addChoice("뒤로 돌아간다", wakeUp);
+  });
 }
 
-// ================== 초기 방 ==================
-
-function lockedDoor() {
-    showText("문이 열리지 않는다. 잠겨 있는 듯하다.<br>열쇠를 찾아야겠다.");
-    showChoices([
-        { text: "침대 밑", action: corpse },
-        { text: "서랍", action: tweezers },
-        { text: "옷장", action: closet }
-    ]);
+function death() {
+  clearAll();
+  text.innerHTML = `
+등 뒤에서 숨소리가 느껴진다.<br>
+너무 늦었다.
+  `;
 }
 
-function searchRoom() {
-    showText(
-        "바닥에서 문서를 발견했다.<br><br>" +
-        "이름: 판태현<br>" +
-        "나이: 30<br>" +
-        "장기 상태: 간 양호 / 신장 양호 / 각막 양호…<br><br>" +
-        "아마 나를 납치해 장기 매매를 하려는 것 같다."
-    );
-    showChoices([
-        { text: "침대 밑", action: corpse },
-        { text: "서랍", action: tweezers },
-        { text: "옷장", action: closet }
-    ]);
-}
-
-function corpse() {
-    showText("침대 밑에 사람 같은 것이 있다.<br>시체인 듯하다.");
-    backToRoom();
-}
-
-function tweezers() {
-    showText("서랍에서 핀셋을 발견했다.<br>이거라면 열 수 있지 않을까?");
-    backToRoom();
-}
-
-function closet() {
-    showText("옷장 안에는 아무것도 없다.<br>숨기에는 좋아 보인다.");
-    backToRoom();
-}
-
-function backToRoom() {
-    showChoices([
-        { text: "방을 살핀다", action: searchRoom },
-        { text: "대기한다", action: waitNormally }
-    ]);
-}
-
-// ================== 대기 (안전 버전) ==================
-
-function waitNormally() {
-    showText(
-        "가만히 숨을 죽인다.<br>" +
-        "집 안은 이상할 정도로 조용하다."
-    );
-    showChoices([
-        { text: "그만 대기한다", action: intro2 }
-    ]);
-}
-
-// ================== 위험한 대기 (나중에 사용) ==================
-// 이 함수는 '발소리 들림' 같은 상황에서만 쓸 것
-function waitDangerously() {
-    showText("발소리가 들린다.<br>점점 가까워진다…");
-    startDangerCountdown(() => {
-        death("문이 열린다.<br>\"깨어 있었네?\"");
-    });
-    showChoices([
-        { text: "가만히 있는다", action: () => death("그가 문을 열었다.") }
-    ]);
+function addChoice(label, func) {
+  const btn = document.createElement("button");
+  btn.textContent = label;
+  btn.onclick = () => {
+    choiceMade = true;
+    func();
+  };
+  choices.appendChild(btn);
 }
 
 // 시작
-intro1();
+intro();
 </script>
 
 </body>
