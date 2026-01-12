@@ -4,151 +4,160 @@
 <meta charset="UTF-8">
 <title>탈출</title>
 <style>
-body {
-  background:#000;
-  color:#eee;
-  font-family: monospace;
-  padding: 20px;
-}
-button {
-  margin-top: 10px;
-  padding: 8px 14px;
-  background:#222;
-  color:#eee;
-  border:1px solid #555;
-  cursor:pointer;
-}
-button:hover {
-  background:#444;
-}
-#choices button {
-  display:block;
-}
+  body {
+    background:#000;
+    color:#eee;
+    font-family: "Malgun Gothic", sans-serif;
+    padding:20px;
+  }
+  #game {
+    max-width:600px;
+    margin:auto;
+    line-height:1.6;
+  }
+  button {
+    display:block;
+    margin:8px 0;
+    padding:8px;
+    background:#111;
+    color:#eee;
+    border:1px solid #555;
+    cursor:pointer;
+  }
+  button:hover {
+    background:#333;
+  }
 </style>
 </head>
-
 <body>
 
-<div id="text"></div>
-<div id="choices"></div>
-
-<audio id="footstep" src="footstep.mp3"></audio>
+<div id="game">
+  <div id="text"></div>
+  <div id="choices"></div>
+</div>
 
 <script>
-let state = "intro";
-let hasPinset = false;
-let choiceMade = false;
-let deathTimer = null;
-
 const text = document.getElementById("text");
 const choices = document.getElementById("choices");
-const footstep = document.getElementById("footstep");
 
-function clearAll() {
+let history = [];
+let inventory = {
+  pinset: false
+};
+
+function clearUI() {
   choices.innerHTML = "";
-  choiceMade = false;
-  if (deathTimer) {
-    clearTimeout(deathTimer);
-    deathTimer = null;
-  }
 }
 
-function intro() {
-  clearAll();
-  text.innerHTML = `
-여느 날과 같은 새벽이다.<br>
-대인 기피증 때문에 사람이 없는 새벽에 강아지 산책을 나왔다.<br>
-퍽— 소리와 함께 기억을 잃었다.
-  `;
-  addChoice("다음", wakeUp);
-}
-
-function wakeUp() {
-  clearAll();
-  text.innerHTML = `
-눈을 떠보니 어느 집이다.<br>
-창문은 모두 신문지와 나무 판자로 막혀 있다.
-  `;
-  addChoice("거실을 살핀다", noiseEvent);
-}
-
-function noiseEvent() {
-  clearAll();
-  text.innerHTML = `
-인기척이 들린다.<br>
-천천히, 발소리가 가까워진다…
-  `;
-  footstep.play();
-
-  addChoice("주방으로 숨는다", death);
-  addChoice("지하실로 숨는다", death);
-  addChoice("화장실로 숨는다", bathroom);
-
-  // 5초 안에 선택 안 하면 사망
-  deathTimer = setTimeout(() => {
-    if (!choiceMade) death();
-  }, 5000);
-}
-
-function bathroom() {
-  choiceMade = true;
-  clearAll();
-  text.innerHTML = `
-화장실이다.<br>
-숨을 곳을 골라야 한다.
-  `;
-  addChoice("욕조 안", surviveBathroom);
-  addChoice("변기 뒤", death);
-  addChoice("세면대 아래", death);
-}
-
-function surviveBathroom() {
-  clearAll();
-  text.innerHTML = `
-욕조 안에 몸을 숨겼다.<br>
-발소리는 지나간 것 같다…<br><br>
-욕실 서랍에서 핀셋을 발견했다.
-  `;
-  hasPinset = true;
-  addChoice("거실로 나온다", doorCheck);
-}
-
-function doorCheck() {
-  clearAll();
-  text.innerHTML = `
-현관문이다.<br>
-잠겨 있다.
-  `;
-  addChoice("문을 연다", () => {
-    clearAll();
-    text.innerHTML = `
-문은 열리지 않는다.<br>
-열쇠와 비밀번호가 필요해 보인다.
-    `;
-    addChoice("뒤로 돌아간다", wakeUp);
-  });
-}
-
-function death() {
-  clearAll();
-  text.innerHTML = `
-등 뒤에서 숨소리가 느껴진다.<br>
-너무 늦었다.
-  `;
-}
-
-function addChoice(label, func) {
+function addChoice(label, action) {
   const btn = document.createElement("button");
   btn.textContent = label;
-  btn.onclick = () => {
-    choiceMade = true;
-    func();
-  };
+  btn.onclick = action;
   choices.appendChild(btn);
 }
 
-// 시작
-intro();
+function go(scene) {
+  history.push(scene);
+  clearUI();
+  scene();
+}
+
+function back() {
+  if (history.length <= 1) return;
+  history.pop();
+  clearUI();
+  history[history.length - 1]();
+}
+
+function backButton() {
+  addChoice("← 뒤로 가기", back);
+}
+
+/* ────────── SCENES ────────── */
+
+function intro() {
+  text.innerHTML = `
+여느 날과 같은 새벽이다.<br>
+대인 기피증 때문에 사람이 없는 새벽에 강아지 산책을 나왔다.<br>
+퍽 소리와 함께 기억을 잃었다.
+`;
+  addChoice("다음", () => go(wakeUp));
+}
+
+function wakeUp() {
+  text.innerHTML = `
+눈을 떠보니 어느 집이다.<br>
+창문은 모두 신문지와 나무 판자로 막혀 있다.
+`;
+  addChoice("방을 살핀다", () => go(room));
+  addChoice("대기한다", () => go(waiting));
+  backButton();
+}
+
+function room() {
+  text.innerHTML = `
+방 안에는 침대, 서랍, 옷장이 있다.
+`;
+  addChoice("침대 밑", () => {
+    text.innerHTML = "사람 같은 것이 있다… 시체인 듯하다.";
+    backButton();
+  });
+  addChoice("서랍", () => go(drawer));
+  addChoice("옷장", () => {
+    text.innerHTML = "옷장 안은 비어 있다. 숨기엔 좋아 보인다.";
+    backButton();
+  });
+  backButton();
+}
+
+function drawer() {
+  if (!inventory.pinset) {
+    inventory.pinset = true;
+    text.innerHTML = "서랍에서 핀셋을 발견했다. 챙겼다.";
+  } else {
+    text.innerHTML = "이미 비어 있다.";
+  }
+  backButton();
+}
+
+function waiting() {
+  text.innerHTML = `
+10분 정도 지났을까.<br>
+발소리가 들린다…
+`;
+  addChoice("가만히 있는다", () => {
+    text.innerHTML = `
+문이 열린다.<br>
+“깨어있네?”
+<br><br><b>사망</b>
+`;
+  });
+  backButton();
+}
+
+function lockedDoor() {
+  text.innerHTML = "문은 잠겨 있다.";
+  addChoice("핀셋을 사용한다", () => {
+    if (!inventory.pinset) {
+      text.innerHTML += "<br>핀셋이 없다.";
+    } else {
+      go(hall);
+    }
+  });
+  backButton();
+}
+
+function hall() {
+  text.innerHTML = "문이 열렸다. 집은 2층 구조인 것 같다.";
+  addChoice("계단으로 간다", () => {
+    text.innerHTML = "이후 진행은 다음 단계에서 확장 가능.";
+    backButton();
+  });
+  backButton();
+}
+
+/* ────────── START ────────── */
+go(intro);
 </script>
 
 </body>
