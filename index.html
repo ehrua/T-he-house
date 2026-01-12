@@ -2,278 +2,157 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>기억이 끊긴 밤</title>
-
+<title>탈출</title>
 <style>
-body {
-    background: #000;
-    color: #eee;
-    font-family: "Noto Sans KR", sans-serif;
-    max-width: 720px;
-    margin: auto;
-    padding: 24px;
-}
-h1 {
-    color: #b30000;
-    margin-bottom: 20px;
-}
-#story {
-    white-space: pre-line;
-    line-height: 1.7;
-    font-size: 17px;
-}
-button {
-    display: block;
-    width: 100%;
-    margin-top: 12px;
-    padding: 14px;
-    background: #111;
-    color: #eee;
-    border: 1px solid #444;
-    font-size: 16px;
-    cursor: pointer;
-}
-button:hover {
-    background: #222;
-}
+    body {
+        background: #000;
+        color: #eee;
+        font-family: "Noto Sans KR", sans-serif;
+        padding: 40px;
+        line-height: 1.8;
+    }
+    #game {
+        max-width: 800px;
+        margin: auto;
+    }
+    .choice {
+        display: block;
+        margin: 10px 0;
+        padding: 12px;
+        background: #111;
+        border: 1px solid #444;
+        color: #eee;
+        cursor: pointer;
+        text-align: left;
+    }
+    .choice:hover {
+        background: #222;
+    }
+    .dead {
+        color: #ff4d4d;
+        font-weight: bold;
+    }
 </style>
 </head>
-
 <body>
 
-<h1 id="title">탈출</h1>
-<div id="story"></div>
-<div id="next"></div>
-<div id="choices"></div>
-
-<!-- 🎵 오디오 -->
-<audio id="bgmFlood" src="flood.mp3"></audio>
-<audio id="bgmAlone" src="alone.mp3"></audio>
-<audio id="bgmChase" src="out_of_flux.mp3"></audio>
-<audio id="sfxPhone" src="phone.mp3"></audio>
+<div id="game"></div>
 
 <script>
-const story = document.getElementById("story");
-const nextArea = document.getElementById("next");
-const choices = document.getElementById("choices");
+let timeout = null;
+let chance = 2;
 
-const flood = document.getElementById("bgmFlood");
-const alone = document.getElementById("bgmAlone");
-const chase = document.getElementById("bgmChase");
-const phone = document.getElementById("sfxPhone");
+function clearTimer() {
+    if (timeout) {
+        clearTimeout(timeout);
+        timeout = null;
+    }
+}
 
-let currentBgm = null;
-let bgmTimer = null;
+function startDeathTimer() {
+    clearTimer();
+    timeout = setTimeout(() => {
+        showText("문이 열린다.<br>\"깨어 있었네?\"", true);
+        showChoices([
+            { text: "사망", action: death }
+        ]);
+    }, 5000);
+}
 
-function stopAllBgm() {
-    [flood, alone, chase].forEach(bgm => {
-        bgm.pause();
-        bgm.currentTime = 0;
+function showText(text, danger = false) {
+    const game = document.getElementById("game");
+    game.innerHTML = `<p ${danger ? 'class="dead"' : ""}>${text}</p>`;
+}
+
+function showChoices(choices, timed = false) {
+    const game = document.getElementById("game");
+    choices.forEach(c => {
+        const btn = document.createElement("button");
+        btn.className = "choice";
+        btn.innerText = c.text;
+        btn.onclick = () => {
+            clearTimer();
+            c.action();
+        };
+        game.appendChild(btn);
     });
-    if (bgmTimer) clearTimeout(bgmTimer);
+    if (timed) startDeathTimer();
 }
 
-function playBgm(bgm, duration = 8000, volume = 0.4) {
-    stopAllBgm();
-    currentBgm = bgm;
-    bgm.volume = volume;
-    bgm.play();
-    bgmTimer = setTimeout(() => {
-        bgm.pause();
-    }, duration);
+function death() {
+    showText("의식이 끊긴다.<br><br>사망했다.", true);
 }
 
-function setText(text) {
-    story.textContent = text;
-    nextArea.innerHTML = "";
-    choices.innerHTML = "";
-}
-
-function showNext(callback) {
-    const btn = document.createElement("button");
-    btn.textContent = "다음으로";
-    btn.onclick = () => {
-        nextArea.innerHTML = "";
-        callback();
-    };
-    nextArea.appendChild(btn);
-}
-
-function addChoice(text, action) {
-    const btn = document.createElement("button");
-    btn.textContent = text;
-    btn.onclick = action;
-    choices.appendChild(btn);
-}
-
-/* ▶ 시작 */
-function intro() {
-    setText(
-`오전 1시.
-야심한 새벽이었다.
-
-강아지와 산책을 하고 있었다.
-공원에는 나 말고 아무도 없었다.
-
-그 다음 기억은 없다.`
+function startGame() {
+    showText(
+        "여느 날과 같은 새벽이다.<br>" +
+        "대인 기피증 때문에 사람이 없는 새벽에 강아지 산책을 나왔다.<br>" +
+        "퍽 소리와 함께 기억을 잃었다.<br><br>" +
+        "눈을 떠보니 어느 집이다.<br>" +
+        "창문은 모두 신문지와 나무 판자로 막혀 있다."
     );
-
-    showNext(intro2);
+    showChoices([
+        { text: "나간다", action: lockedDoor },
+        { text: "방을 살핀다", action: searchRoom },
+        { text: "대기한다", action: wait }
+    ]);
 }
 
-function intro2() {
-    playBgm(flood, 7000, 0.35);
+function lockedDoor() {
+    showText("문이 열리지 않는다. 잠겨 있는 듯하다.<br>열쇠를 찾아야겠다.");
+    showChoices([
+        { text: "침대 밑", action: corpse },
+        { text: "서랍", action: tweezers },
+        { text: "옷장", action: closet }
+    ]);
+}
 
-    setText(
-`눈을 뜬다.
+function corpse() {
+    showText("사람 같은 것이 있다.<br>시체인 듯하다.");
+    backToRoom();
+}
 
-천장이 보인다.
-모르는 집이다.
+function tweezers() {
+    showText("서랍에서 핀셋을 발견했다.<br>이거라면 열 수 있지 않을까?");
+    backToRoom();
+}
 
-몸이 무겁다.
-손목이 욱신거린다.`
+function closet() {
+    showText("옷장 안에는 아무것도 없다.<br>숨기에는 좋아 보인다.");
+    backToRoom();
+}
+
+function backToRoom() {
+    showChoices([
+        { text: "방을 살핀다", action: searchRoom },
+        { text: "대기한다", action: wait }
+    ]);
+}
+
+function searchRoom() {
+    showText(
+        "바닥에서 문서를 발견했다.<br><br>" +
+        "이름: 판태현<br>" +
+        "나이: 30<br>" +
+        "장기 상태: 간 양호 / 신장 양호 / 각막 양호…<br><br>" +
+        "아마 장기 매매를 하려는 것 같다."
     );
-
-    showNext(firstRoom);
+    showChoices([
+        { text: "침대 밑", action: corpse },
+        { text: "서랍", action: tweezers },
+        { text: "옷장", action: closet }
+    ]);
 }
 
-function firstRoom() {
-    setText(
-`집 안은 조용하다.
-너무 조용하다.
-
-어디선가 인기척이 들린 것 같기도 하다.`
-    );
-
-    showNext(() => {
-        addChoice("방을 나간다", hallway);
-        addChoice("잠시 숨을 고른다", aloneMoment);
-    });
+function wait() {
+    showText("시간이 흐른다…<br>발소리가 들린다.", true);
+    showChoices([
+        { text: "가만히 있는다", action: death }
+    ], true);
 }
 
-function aloneMoment() {
-    playBgm(alone, 6000, 0.4);
-
-    setText(
-`숨을 고른다.
-
-강아지는 없다.
-목줄도 없다.
-
-이상하다.`
-    );
-
-    showNext(firstRoom);
-}
-
-function hallway() {
-    playBgm(flood, 5000, 0.3);
-
-    setText(
-`복도다.
-
-바닥이 삐걱인다.
-이 집에 혼자가 아니라는 생각이 든다.`
-    );
-
-    showNext(hideChoice);
-}
-
-function hideChoice() {
-    setText(
-`갑자기 발소리가 들린다.
-가까워지고 있다.
-
-어디 숨을까?`
-    );
-
-    addChoice("욕실로 들어간다", bathroom);
-    addChoice("그대로 서 있는다", caught);
-}
-
-function bathroom() {
-    stopAllBgm();
-
-    setText(
-`욕실이다.
-숨을 곳이 몇 군데 보인다.`
-    );
-
-    showNext(() => {
-        addChoice("욕조 안에 숨는다", bathtub);
-        addChoice("변기 뒤", caught);
-        addChoice("세면대 아래", caught);
-    });
-}
-
-function bathtub() {
-    stopAllBgm();
-
-    setText(
-`커튼을 닫고 욕조 안에 몸을 숨긴다.
-
-발소리가 멈춘다.
-잠시 후, 멀어진다.`
-    );
-
-    showNext(() => {
-        setText(
-`조심스럽게 욕실을 나온다.
-
-문 앞에—
-그가 서 있다.`
-        );
-        playBgm(chase, 6000, 0.5);
-        showNext(caught);
-    });
-}
-
-function caught() {
-    stopAllBgm();
-
-    setText(
-`시야가 흔들린다.
-
-도망칠 틈은 없다.`
-    );
-
-    showNext(endPolice);
-}
-
-function endPolice() {
-    stopAllBgm();
-
-    setText(
-`눈을 뜨니 전화기가 앞에 있다.
-
-경찰에 신고하시겠습니까?`
-    );
-
-    addChoice("신고한다", () => {
-        phone.play();
-        setTimeout(() => {
-            setText(
-`전화기 너머에서
-낮은 웃음소리가 들린다.
-
-엔딩: 공범`
-            );
-        }, 3000);
-    });
-
-    addChoice("신고하지 않는다", () => {
-        setText(
-`밖이다.
-공원이다.
-
-강아지를 산책시키던 기억이 돌아온다.
-
-엔딩: 진실`
-        );
-    });
-}
-
-intro();
+// 게임 시작
+startGame();
 </script>
 
 </body>
