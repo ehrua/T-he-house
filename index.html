@@ -1,1 +1,227 @@
-# T-he-house
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>탈출</title>
+<style>
+    body {
+        background: #000;
+        color: #eee;
+        font-family: "Noto Sans KR", sans-serif;
+        max-width: 700px;
+        margin: auto;
+        padding: 20px;
+    }
+    h1 { color: #ff4c4c; }
+    button {
+        display: block;
+        width: 100%;
+        margin: 10px 0;
+        padding: 12px;
+        background: #111;
+        color: #eee;
+        border: 1px solid #444;
+        cursor: pointer;
+        font-size: 16px;
+    }
+    button:hover {
+        background: #222;
+    }
+    .log {
+        margin-top: 20px;
+        white-space: pre-line;
+        line-height: 1.6;
+    }
+</style>
+</head>
+<body>
+
+<h1>탈출</h1>
+<div id="story" class="log"></div>
+<div id="choices"></div>
+
+<script>
+let state = {
+    numbers: [],
+    hasKey: false,
+    tension: 0
+};
+
+const story = document.getElementById("story");
+const choices = document.getElementById("choices");
+
+function setText(text) {
+    story.textContent = text;
+    choices.innerHTML = "";
+}
+
+function addChoice(text, action) {
+    const btn = document.createElement("button");
+    btn.textContent = text;
+    btn.onclick = action;
+    choices.appendChild(btn);
+}
+
+function chance(rate) {
+    return Math.random() < rate;
+}
+
+/* 시작 */
+function start() {
+    setText(
+`눈을 뜨자 낯선 집이다.
+손목이 아프다. 풀린 흔적이 있다.
+
+집 안에서 인기척이 들린다.`
+    );
+
+    addChoice("주방으로 간다", kitchen);
+    addChoice("화장실로 간다", bathroom);
+    addChoice("2층으로 간다", bedroom);
+}
+
+/* 주방 */
+function kitchen() {
+    state.tension++;
+    setText("주방이다. 식칼 자국이 벽에 남아 있다.\n인기척이 가까워진다.");
+
+    addChoice("숨는다", hideEvent);
+    addChoice("다시 나간다", start);
+}
+
+/* 화장실 */
+function bathroom() {
+    state.tension++;
+    setText("화장실이다. 변기 안에서 숫자가 적힌 종이를 발견했다.\n[7]");
+
+    if (!state.numbers.includes(7)) state.numbers.push(7);
+
+    addChoice("욕조에 숨는다", bathtub);
+    addChoice("변기 뒤에 숨는다", hideFail);
+    addChoice("세면대 아래", hideFail);
+}
+
+/* 2층 */
+function bedroom() {
+    state.tension++;
+    setText("2층 안방이다. 침대 밑에 숫자가 적혀 있다.\n[3]");
+
+    if (!state.numbers.includes(3)) state.numbers.push(3);
+
+    addChoice("서재로 간다", library);
+    addChoice("다시 내려간다", start);
+}
+
+/* 서재 */
+function library() {
+    state.tension++;
+    setText("서재다. 책 사이에서 숫자를 발견했다.\n[5]");
+
+    if (!state.numbers.includes(5)) state.numbers.push(5);
+
+    addChoice("금고를 찾는다", safe);
+    addChoice("숨는다", hideEvent);
+}
+
+/* 금고 */
+function safe() {
+    if (state.numbers.length >= 3) {
+        setText("금고가 열린다.\n현관 열쇠와 숫자 [9]를 얻었다.");
+        state.hasKey = true;
+        if (!state.numbers.includes(9)) state.numbers.push(9);
+
+        addChoice("현관으로 간다", frontDoor);
+    } else {
+        setText("아직 단서가 부족하다.");
+        addChoice("돌아간다", start);
+    }
+}
+
+/* 숨기 이벤트 */
+function hideEvent() {
+    state.tension++;
+
+    setText("인기척이 바로 앞까지 온다...\n숨을 죽인다.");
+
+    if (chance(0.6 - state.tension * 0.05)) {
+        setText("발소리가 멀어진다.\n살아남았다.");
+        addChoice("조심히 이동한다", start);
+    } else {
+        caught();
+    }
+}
+
+/* 욕조 (함정) */
+function bathtub() {
+    state.tension++;
+
+    if (chance(0.5)) {
+        setText(
+"욕조 안에 숨었다.
+납치범은 그냥 지나간 것 같다.
+
+문을 나서는 순간—
+그가 서 있다."
+        );
+        caught();
+    } else {
+        setText("욕조 안에서 숨을 참고 버텼다.\n이번엔 살아남았다.");
+        addChoice("나간다", start);
+    }
+}
+
+/* 무조건 실패 숨기 */
+function hideFail() {
+    setText("숨은 순간, 시선이 마주친다.");
+    caught();
+}
+
+/* 잡힘 */
+function caught() {
+    setText(
+"잡혔다.
+
+눈앞이 어두워진다."
+    );
+    addChoice("눈을 뜬다", policeChoice);
+}
+
+/* 현관 */
+function frontDoor() {
+    if (state.hasKey && state.numbers.sort().join("") === "3579") {
+        setText("현관이 열린다.\n밖으로 나왔다.");
+        addChoice("경찰에 신고한다", policeTrap);
+        addChoice("신고하지 않는다", truthEnd);
+    } else {
+        setText("아직 탈출할 수 없다.");
+        addChoice("돌아간다", start);
+    }
+}
+
+/* 경찰 함정 */
+function policeTrap() {
+    setText(
+"경찰차가 멈춘다.
+문이 열린다.
+
+그는 웃고 있다."
+    );
+    addChoice("엔딩", () => setText("엔딩: 공범"));
+}
+
+/* 진실 엔딩 */
+function truthEnd() {
+    setText(
+"공원이다.
+개를 산책시키던 기억이 떠오른다.
+
+처음부터 혼자가 아니었다."
+    );
+    addChoice("엔딩", () => setText("엔딩: 진실"));
+}
+
+start();
+</script>
+
+</body>
+</html>
