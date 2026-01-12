@@ -4,34 +4,28 @@
 <meta charset="UTF-8">
 <title>탈출</title>
 <style>
-  body {
-    background:#000;
-    color:#eee;
-    font-family: "Malgun Gothic", sans-serif;
-    padding:20px;
-  }
-  #game {
-    max-width:600px;
-    margin:auto;
-    line-height:1.6;
-  }
-  button {
-    display:block;
-    margin:8px 0;
-    padding:8px;
-    background:#111;
-    color:#eee;
-    border:1px solid #555;
-    cursor:pointer;
-  }
-  button:hover {
-    background:#333;
-  }
+body {
+  background:#000;
+  color:#eee;
+  font-family:Malgun Gothic, sans-serif;
+}
+#game { max-width:600px; margin:auto; }
+button {
+  display:block;
+  margin:6px 0;
+  padding:8px;
+  background:#111;
+  color:#eee;
+  border:1px solid #555;
+}
+button:hover { background:#333; }
+#backBtn { opacity:0.7; }
 </style>
 </head>
 <body>
 
 <div id="game">
+  <button id="backBtn">← 뒤로 가기</button>
   <div id="text"></div>
   <div id="choices"></div>
 </div>
@@ -39,10 +33,13 @@
 <script>
 const text = document.getElementById("text");
 const choices = document.getElementById("choices");
+const backBtn = document.getElementById("backBtn");
 
 let history = [];
+let canGoBack = true;
+
 let inventory = {
-  pinset: false
+  pinset:false
 };
 
 function clearUI() {
@@ -56,24 +53,21 @@ function addChoice(label, action) {
   choices.appendChild(btn);
 }
 
-function go(scene) {
+backBtn.onclick = () => {
+  if (!canGoBack || history.length <= 1) return;
+  history.pop();
+  history[history.length - 1]();
+};
+
+function go(scene, backable = true) {
+  canGoBack = backable;
+  backBtn.style.display = backable ? "block" : "none";
   history.push(scene);
   clearUI();
   scene();
 }
 
-function back() {
-  if (history.length <= 1) return;
-  history.pop();
-  clearUI();
-  history[history.length - 1]();
-}
-
-function backButton() {
-  addChoice("← 뒤로 가기", back);
-}
-
-/* ────────── SCENES ────────── */
+/* ───── SCENES ───── */
 
 function intro() {
   text.innerHTML = `
@@ -89,76 +83,57 @@ function wakeUp() {
 눈을 떠보니 어느 집이다.<br>
 창문은 모두 신문지와 나무 판자로 막혀 있다.
 `;
+  addChoice("나간다", () => go(lockedDoor));
   addChoice("방을 살핀다", () => go(room));
-  addChoice("대기한다", () => go(waiting));
-  backButton();
+  addChoice("대기한다", () => go(waiting, false));
 }
 
 function room() {
-  text.innerHTML = `
-방 안에는 침대, 서랍, 옷장이 있다.
-`;
+  text.innerHTML = "방 안에는 침대, 서랍, 옷장이 있다.";
   addChoice("침대 밑", () => {
     text.innerHTML = "사람 같은 것이 있다… 시체인 듯하다.";
-    backButton();
   });
   addChoice("서랍", () => go(drawer));
   addChoice("옷장", () => {
-    text.innerHTML = "옷장 안은 비어 있다. 숨기엔 좋아 보인다.";
-    backButton();
+    text.innerHTML = "옷장은 비어 있다. 숨기엔 좋아 보인다.";
   });
-  backButton();
 }
 
 function drawer() {
-  if (!inventory.pinset) {
-    inventory.pinset = true;
-    text.innerHTML = "서랍에서 핀셋을 발견했다. 챙겼다.";
-  } else {
-    text.innerHTML = "이미 비어 있다.";
-  }
-  backButton();
-}
-
-function waiting() {
+  inventory.pinset = true;
   text.innerHTML = `
-10분 정도 지났을까.<br>
-발소리가 들린다…
+서랍에서 핀셋을 발견했다.<br>
+이걸로 문을 열 수 있을 것 같다.
 `;
-  addChoice("가만히 있는다", () => {
-    text.innerHTML = `
-문이 열린다.<br>
-“깨어있네?”
-<br><br><b>사망</b>
-`;
-  });
-  backButton();
+  addChoice("문으로 간다", () => go(unlockDoor));
 }
 
 function lockedDoor() {
   text.innerHTML = "문은 잠겨 있다.";
-  addChoice("핀셋을 사용한다", () => {
-    if (!inventory.pinset) {
-      text.innerHTML += "<br>핀셋이 없다.";
-    } else {
-      go(hall);
-    }
-  });
-  backButton();
+  if (inventory.pinset) {
+    addChoice("핀셋을 사용한다", () => go(unlockDoor));
+  }
 }
 
-function hall() {
-  text.innerHTML = "문이 열렸다. 집은 2층 구조인 것 같다.";
+function unlockDoor() {
+  text.innerHTML = "철컥… 문이 열렸다.";
   addChoice("계단으로 간다", () => {
-    text.innerHTML = "이후 진행은 다음 단계에서 확장 가능.";
-    backButton();
+    text.innerHTML = "다음 구간 진행 가능";
   });
-  backButton();
 }
 
-/* ────────── START ────────── */
+function waiting() {
+  text.innerHTML = `
+10분쯤 지났을까.<br>
+발소리가 점점 가까워진다…
+`;
+  addChoice("가만히 있는다", () => {
+    text.innerHTML = "“깨어있네?”<br><b>사망</b>";
+  });
+}
+
+/* START */
 go(intro);
 </script>
-
 </body>
 </html>
