@@ -2,57 +2,101 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>탈출</title>
+<title>기억이 끊긴 밤</title>
+
 <style>
-    body {
-        background: #000;
-        color: #eee;
-        font-family: "Noto Sans KR", sans-serif;
-        max-width: 700px;
-        margin: auto;
-        padding: 20px;
-    }
-    h1 { color: #ff4c4c; }
-    button {
-        display: block;
-        width: 100%;
-        margin: 10px 0;
-        padding: 12px;
-        background: #111;
-        color: #eee;
-        border: 1px solid #444;
-        cursor: pointer;
-        font-size: 16px;
-    }
-    button:hover {
-        background: #222;
-    }
-    .log {
-        margin-top: 20px;
-        white-space: pre-line;
-        line-height: 1.6;
-    }
+body {
+    background: #000;
+    color: #eee;
+    font-family: "Noto Sans KR", sans-serif;
+    max-width: 720px;
+    margin: auto;
+    padding: 24px;
+}
+h1 {
+    color: #b30000;
+    margin-bottom: 20px;
+}
+#story {
+    white-space: pre-line;
+    line-height: 1.7;
+    font-size: 17px;
+}
+button {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    padding: 14px;
+    background: #111;
+    color: #eee;
+    border: 1px solid #444;
+    font-size: 16px;
+    cursor: pointer;
+}
+button:hover {
+    background: #222;
+}
 </style>
 </head>
+
 <body>
 
-<h1>탈출</h1>
-<div id="story" class="log"></div>
+<h1 id="title">탈출</h1>
+<div id="story"></div>
+<div id="next"></div>
 <div id="choices"></div>
 
-<script>
-let state = {
-    numbers: [],
-    hasKey: false,
-    tension: 0
-};
+<!-- 🎵 오디오 -->
+<audio id="bgmFlood" src="flood.mp3"></audio>
+<audio id="bgmAlone" src="alone.mp3"></audio>
+<audio id="bgmChase" src="out_of_flux.mp3"></audio>
+<audio id="sfxPhone" src="phone.mp3"></audio>
 
+<script>
 const story = document.getElementById("story");
+const nextArea = document.getElementById("next");
 const choices = document.getElementById("choices");
+
+const flood = document.getElementById("bgmFlood");
+const alone = document.getElementById("bgmAlone");
+const chase = document.getElementById("bgmChase");
+const phone = document.getElementById("sfxPhone");
+
+let currentBgm = null;
+let bgmTimer = null;
+
+function stopAllBgm() {
+    [flood, alone, chase].forEach(bgm => {
+        bgm.pause();
+        bgm.currentTime = 0;
+    });
+    if (bgmTimer) clearTimeout(bgmTimer);
+}
+
+function playBgm(bgm, duration = 8000, volume = 0.4) {
+    stopAllBgm();
+    currentBgm = bgm;
+    bgm.volume = volume;
+    bgm.play();
+    bgmTimer = setTimeout(() => {
+        bgm.pause();
+    }, duration);
+}
 
 function setText(text) {
     story.textContent = text;
+    nextArea.innerHTML = "";
     choices.innerHTML = "";
+}
+
+function showNext(callback) {
+    const btn = document.createElement("button");
+    btn.textContent = "다음으로";
+    btn.onclick = () => {
+        nextArea.innerHTML = "";
+        callback();
+    };
+    nextArea.appendChild(btn);
 }
 
 function addChoice(text, action) {
@@ -62,165 +106,174 @@ function addChoice(text, action) {
     choices.appendChild(btn);
 }
 
-function chance(rate) {
-    return Math.random() < rate;
-}
-
-/* 시작 */
-function start() {
+/* ▶ 시작 */
+function intro() {
     setText(
-`눈을 뜨자 낯선 집이다.
-손목이 아프다. 풀린 흔적이 있다.
+`오전 1시.
+야심한 새벽이었다.
 
-집 안에서 인기척이 들린다.`
+강아지와 산책을 하고 있었다.
+공원에는 나 말고 아무도 없었다.
+
+그 다음 기억은 없다.`
     );
 
-    addChoice("주방으로 간다", kitchen);
-    addChoice("화장실로 간다", bathroom);
-    addChoice("2층으로 간다", bedroom);
+    showNext(intro2);
 }
 
-/* 주방 */
-function kitchen() {
-    state.tension++;
-    setText("주방이다. 식칼 자국이 벽에 남아 있다.\n인기척이 가까워진다.");
+function intro2() {
+    playBgm(flood, 7000, 0.35);
 
-    addChoice("숨는다", hideEvent);
-    addChoice("다시 나간다", start);
+    setText(
+`눈을 뜬다.
+
+천장이 보인다.
+모르는 집이다.
+
+몸이 무겁다.
+손목이 욱신거린다.`
+    );
+
+    showNext(firstRoom);
 }
 
-/* 화장실 */
+function firstRoom() {
+    setText(
+`집 안은 조용하다.
+너무 조용하다.
+
+어디선가 인기척이 들린 것 같기도 하다.`
+    );
+
+    showNext(() => {
+        addChoice("방을 나간다", hallway);
+        addChoice("잠시 숨을 고른다", aloneMoment);
+    });
+}
+
+function aloneMoment() {
+    playBgm(alone, 6000, 0.4);
+
+    setText(
+`숨을 고른다.
+
+강아지는 없다.
+목줄도 없다.
+
+이상하다.`
+    );
+
+    showNext(firstRoom);
+}
+
+function hallway() {
+    playBgm(flood, 5000, 0.3);
+
+    setText(
+`복도다.
+
+바닥이 삐걱인다.
+이 집에 혼자가 아니라는 생각이 든다.`
+    );
+
+    showNext(hideChoice);
+}
+
+function hideChoice() {
+    setText(
+`갑자기 발소리가 들린다.
+가까워지고 있다.
+
+어디 숨을까?`
+    );
+
+    addChoice("욕실로 들어간다", bathroom);
+    addChoice("그대로 서 있는다", caught);
+}
+
 function bathroom() {
-    state.tension++;
-    setText("화장실이다. 변기 안에서 숫자가 적힌 종이를 발견했다.\n[7]");
+    stopAllBgm();
 
-    if (!state.numbers.includes(7)) state.numbers.push(7);
+    setText(
+`욕실이다.
+숨을 곳이 몇 군데 보인다.`
+    );
 
-    addChoice("욕조에 숨는다", bathtub);
-    addChoice("변기 뒤에 숨는다", hideFail);
-    addChoice("세면대 아래", hideFail);
+    showNext(() => {
+        addChoice("욕조 안에 숨는다", bathtub);
+        addChoice("변기 뒤", caught);
+        addChoice("세면대 아래", caught);
+    });
 }
 
-/* 2층 */
-function bedroom() {
-    state.tension++;
-    setText("2층 안방이다. 침대 밑에 숫자가 적혀 있다.\n[3]");
-
-    if (!state.numbers.includes(3)) state.numbers.push(3);
-
-    addChoice("서재로 간다", library);
-    addChoice("다시 내려간다", start);
-}
-
-/* 서재 */
-function library() {
-    state.tension++;
-    setText("서재다. 책 사이에서 숫자를 발견했다.\n[5]");
-
-    if (!state.numbers.includes(5)) state.numbers.push(5);
-
-    addChoice("금고를 찾는다", safe);
-    addChoice("숨는다", hideEvent);
-}
-
-/* 금고 */
-function safe() {
-    if (state.numbers.length >= 3) {
-        setText("금고가 열린다.\n현관 열쇠와 숫자 [9]를 얻었다.");
-        state.hasKey = true;
-        if (!state.numbers.includes(9)) state.numbers.push(9);
-
-        addChoice("현관으로 간다", frontDoor);
-    } else {
-        setText("아직 단서가 부족하다.");
-        addChoice("돌아간다", start);
-    }
-}
-
-/* 숨기 이벤트 */
-function hideEvent() {
-    state.tension++;
-
-    setText("인기척이 바로 앞까지 온다...\n숨을 죽인다.");
-
-    if (chance(0.6 - state.tension * 0.05)) {
-        setText("발소리가 멀어진다.\n살아남았다.");
-        addChoice("조심히 이동한다", start);
-    } else {
-        caught();
-    }
-}
-
-/* 욕조 (함정) */
 function bathtub() {
-    state.tension++;
+    stopAllBgm();
 
-    if (chance(0.5)) {
+    setText(
+`커튼을 닫고 욕조 안에 몸을 숨긴다.
+
+발소리가 멈춘다.
+잠시 후, 멀어진다.`
+    );
+
+    showNext(() => {
         setText(
-"욕조 안에 숨었다.
-납치범은 그냥 지나간 것 같다.
+`조심스럽게 욕실을 나온다.
 
-문을 나서는 순간—
-그가 서 있다."
+문 앞에—
+그가 서 있다.`
         );
-        caught();
-    } else {
-        setText("욕조 안에서 숨을 참고 버텼다.\n이번엔 살아남았다.");
-        addChoice("나간다", start);
-    }
+        playBgm(chase, 6000, 0.5);
+        showNext(caught);
+    });
 }
 
-/* 무조건 실패 숨기 */
-function hideFail() {
-    setText("숨은 순간, 시선이 마주친다.");
-    caught();
-}
-
-/* 잡힘 */
 function caught() {
+    stopAllBgm();
+
     setText(
-"잡혔다.
+`시야가 흔들린다.
 
-눈앞이 어두워진다."
+도망칠 틈은 없다.`
     );
-    addChoice("눈을 뜬다", policeChoice);
+
+    showNext(endPolice);
 }
 
-/* 현관 */
-function frontDoor() {
-    if (state.hasKey && state.numbers.sort().join("") === "3579") {
-        setText("현관이 열린다.\n밖으로 나왔다.");
-        addChoice("경찰에 신고한다", policeTrap);
-        addChoice("신고하지 않는다", truthEnd);
-    } else {
-        setText("아직 탈출할 수 없다.");
-        addChoice("돌아간다", start);
-    }
-}
+function endPolice() {
+    stopAllBgm();
 
-/* 경찰 함정 */
-function policeTrap() {
     setText(
-"경찰차가 멈춘다.
-문이 열린다.
+`눈을 뜨니 전화기가 앞에 있다.
 
-그는 웃고 있다."
+경찰에 신고하시겠습니까?`
     );
-    addChoice("엔딩", () => setText("엔딩: 공범"));
+
+    addChoice("신고한다", () => {
+        phone.play();
+        setTimeout(() => {
+            setText(
+`전화기 너머에서
+낮은 웃음소리가 들린다.
+
+엔딩: 공범`
+            );
+        }, 3000);
+    });
+
+    addChoice("신고하지 않는다", () => {
+        setText(
+`밖이다.
+공원이다.
+
+강아지를 산책시키던 기억이 돌아온다.
+
+엔딩: 진실`
+        );
+    });
 }
 
-/* 진실 엔딩 */
-function truthEnd() {
-    setText(
-"공원이다.
-개를 산책시키던 기억이 떠오른다.
-
-처음부터 혼자가 아니었다."
-    );
-    addChoice("엔딩", () => setText("엔딩: 진실"));
-}
-
-start();
+intro();
 </script>
 
 </body>
