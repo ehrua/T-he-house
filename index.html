@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<title>탈출</title>
+<meta charset="UTF-8">
+<title>나폴리탄 괴담 테스트</title>
 <style>
   body {
     background: #000;
     color: #eee;
-    font-family: "Apple SD Gothic Neo", sans-serif;
-    padding: 30px;
+    font-family: "Noto Serif KR", serif;
+    padding: 20px;
   }
   #text {
-    margin-bottom: 20px;
-    line-height: 1.8;
     white-space: pre-line;
+    margin-bottom: 20px;
+    line-height: 1.7;
   }
   .choice {
     display: block;
@@ -27,246 +27,192 @@
   .choice:hover {
     background: #222;
   }
+  .disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
 </style>
 </head>
 <body>
 
-<h2>탈출</h2>
 <div id="text"></div>
 <div id="choices"></div>
 
 <script>
-/* ================= 설정 ================= */
-const TEST_MODE = true;
-
-/* ================= 상태 ================= */
+/* ===== 상태 관리 ===== */
 let state = {
-  hasTweezers: true,
-  hasBasementKey: true, // 서재에서 얻은 상태
-  hasSafeKey: false,
-  hasFrontKey: false,
-  sceneStack: []
+  room: "bedroom",
+  hasTweezers: false,
+  drawerChecked: false,
+  backEnabled: false,
+  history: []
 };
 
-const textEl = document.getElementById("text");
-const choicesEl = document.getElementById("choices");
+/* ===== 공통 렌더 ===== */
+function render(text, choices, allowBack = false) {
+  const textBox = document.getElementById("text");
+  const choiceBox = document.getElementById("choices");
 
-/* ================= 유틸 ================= */
-function clearChoices() {
-  choicesEl.innerHTML = "";
-}
+  textBox.textContent = text;
+  choiceBox.innerHTML = "";
 
-function show(text) {
-  textEl.textContent = text;
-  clearChoices();
-}
-
-function choice(label, action) {
-  const btn = document.createElement("button");
-  btn.className = "choice";
-  btn.textContent = label;
-  btn.onclick = action;
-  choicesEl.appendChild(btn);
-}
-
-function pushScene(fn) {
-  state.sceneStack.push(fn);
-}
-
-function back() {
-  const prev = state.sceneStack.pop();
-  if (prev) prev();
-}
-
-/* ================= 시작 ================= */
-room();
-
-/* ================= 2층 방 ================= */
-function room() {
-  show(
-`핀셋을 이용해 문을 열었다.
-복도를 둘러보니 이 집은 2층 구조인 것 같다.
-
-어디로 갈까?`
-  );
-  pushScene(room);
-
-  choice("서재로 간다", study);
-  choice("계단으로 내려간다", stairsDown);
-}
-
-/* ================= 서재 ================= */
-function study() {
-  show(
-`서재인 듯한 방이다.
-벽에는 사진이 걸려 있고, 책장에는 해부학 관련 서적들이 가득하다.`
-  );
-  pushScene(study);
-
-  choice("밖으로 나간다", () => {
-    show(
-`문을 열고 나서자 복도 끝에서 인기척이 느껴진다.
-숨을 죽이고 가만히 있어야 할 것 같다.`
-    );
-    pushScene(study);
-    choice("다시 서재로 돌아간다", back);
-  });
-
-  choice("책들을 뒤진다", secretNote);
-  choice("서랍을 뒤진다", studyDrawer);
-}
-
-function secretNote() {
-  show(
-`책 하나를 잡아당기자 책장이 갈라지며 숨겨진 공간이 나타났다.
-
-“이 글을 읽고 있다면 당신도 잡혀온 사람일 겁니다.
-탈출구는 두 곳, 현관과 지하실.
-
-현관은 비밀번호와 열쇠가 필요합니다.
-지하실은 그가 들고 있는 도끼가 필요합니다.
-
-행운을 빕니다.”`
-  );
-  pushScene(study);
-  choice("서재로 돌아간다", back);
-}
-
-function studyDrawer() {
-  show(
-`서랍 안에서 열쇠 하나를 발견했다.
-지하실 열쇠인 것 같다.`
-  );
-  pushScene(study);
-  choice("서재로 돌아간다", back);
-}
-
-/* ================= 계단 / 1층 ================= */
-function stairsDown() {
-  show(
-`조심스럽게 계단을 내려왔다.
-아래층에서 인기척이 들리는 것 같다.`
-  );
-  pushScene(stairsDown);
-
-  choice("주방으로 간다", kitchen);
-  choice("거실로 간다", living);
-  choice("화장실로 간다", bathroom);
-  choice("지하실 문으로 간다", basementDoor);
-}
-
-/* ================= 주방 ================= */
-function kitchen() {
-  show(
-`주방이다.
-냉장고, 싱크대, 전자레인지가 보인다.`
-  );
-  pushScene(kitchen);
-
-  choice("냉장고를 연다", () => {
-    show("안에는 아무것도 없다.");
-    pushScene(kitchen);
-    choice("뒤로 돌아간다", back);
-  });
-
-  choice("전자레인지를 확인한다", () => {
-    show(
-state.hasBasementKey
-? "이미 열쇠를 챙긴 것 같다."
-: "안에서 열쇠를 발견했다."
-    );
-    state.hasBasementKey = true;
-    pushScene(kitchen);
-    choice("뒤로 돌아간다", back);
-  });
-
-  choice("싱크대 아래에 숨는다", () => {
-    show("숨기에는 좋아 보인다.");
-    pushScene(kitchen);
-    choice("뒤로 돌아간다", back);
-  });
-}
-
-/* ================= 거실 ================= */
-function living() {
-  show(
-`거실이다.
-서랍, 옷장, TV가 있다.`
-  );
-  pushScene(living);
-
-  choice("서랍을 연다", () => {
-    if (!state.hasSafeKey) {
-      state.hasSafeKey = true;
-      show("열쇠를 발견했다. 금고 열쇠인 듯하다.");
-    } else {
-      show("이미 비어 있다.");
-    }
-    pushScene(living);
-    choice("뒤로 돌아간다", back);
-  });
-
-  choice("옷장을 연다", () => {
-    show("안에는 아무것도 없다. 숨기에는 괜찮아 보인다.");
-    pushScene(living);
-    choice("뒤로 돌아간다", back);
-  });
-
-  choice("TV를 켠다", () => {
-    show(
-`예능 프로그램이 흘러나온다.
-“정답은 3849입니다.”`
-    );
-    pushScene(living);
-    choice("뒤로 돌아간다", back);
-  });
-}
-
-/* ================= 화장실 ================= */
-function bathroom() {
-  show(
-`화장실이다.
-어디에 숨을까?`
-  );
-  pushScene(bathroom);
-
-  choice("문 뒤", () => {
-    show("아무 일 없이 지나간 것 같다.");
-    pushScene(bathroom);
-    choice("뒤로 돌아간다", back);
-  });
-
-  choice("변기 뒤", () => {
-    show("그가 나를 붙잡았다. 눈앞이 캄캄해진다.");
-  });
-
-  choice("욕조", () => {
-    show(
-`욕조 안에는 피가 가득하다.
-하지만 숨을 수는 있을 것 같다.`
-    );
-    pushScene(bathroom);
-    choice("욕조 안으로 들어간다", () => {
-      show("그는 찾다 포기하고 떠난 것 같다.");
-      pushScene(bathroom);
-      choice("뒤로 돌아간다", back);
-    });
-    choice("다른 곳으로 숨는다", () => {
-      show("숨기도 전에 배에 차가운 감각이 느껴진다.");
-    });
-  });
-}
-
-/* ================= 지하실 문 ================= */
-function basementDoor() {
-  if (TEST_MODE || state.hasBasementKey) {
-    show("지하실 문이 열렸다.");
-  } else {
-    show("지하실 문은 잠겨 있다.");
-    pushScene(stairsDown);
-    choice("뒤로 돌아간다", back);
+  if (allowBack && state.history.length > 0) {
+    const backBtn = document.createElement("button");
+    backBtn.textContent = "뒤로 가기";
+    backBtn.className = "choice";
+    backBtn.onclick = goBack;
+    choiceBox.appendChild(backBtn);
   }
+
+  choices.forEach(c => {
+    const btn = document.createElement("button");
+    btn.textContent = c.label;
+    btn.className = "choice";
+    btn.onclick = c.action;
+    choiceBox.appendChild(btn);
+  });
 }
+
+function saveState() {
+  state.history.push(JSON.stringify(state));
+}
+
+function goBack() {
+  const prev = state.history.pop();
+  if (!prev) return;
+  state = JSON.parse(prev);
+  scenes[state.room]();
+}
+
+/* ===== 씬 정의 ===== */
+const scenes = {
+
+  bedroom() {
+    state.room = "bedroom";
+    render(
+`눈을 뜨자 낡은 방 천장이 보인다.
+공기가 지나치게 고요하다.
+이 방에서 너무 오래 머무르는 건 좋지 않을 것 같다.`,
+    [
+      { label: "방을 살핀다", action: () => { saveState(); scenes.bedroomSearch(); }},
+      { label: "대기한다", action: () => {
+        render("아무 일도 일어나지 않는다.\n…이 선택은 의미가 없는 것 같다.", [
+          { label: "다시 생각한다", action: scenes.bedroom }
+        ]);
+      }}
+    ]
+    );
+  },
+
+  bedroomSearch() {
+    state.room = "bedroomSearch";
+    render(
+`방 안에는 침대, 옷장, 그리고 낡은 서랍이 있다.`,
+    [
+      { label: "서랍을 뒤진다", action: () => { saveState(); scenes.drawer(); }},
+      { label: "옷장을 연다", action: () => { saveState(); scenes.closet(); }},
+      { label: "문으로 간다", action: () => { saveState(); scenes.leaveRoom(); }}
+    ],
+    true
+    );
+  },
+
+  drawer() {
+    state.room = "drawer";
+    if (!state.hasTweezers) {
+      state.hasTweezers = true;
+      render(
+`서랍 안쪽 깊숙한 곳에서 핀셋을 발견했다.
+왜 이런 물건이 여기에 있는지는 모르겠지만,
+가지고 가는 편이 좋을 것 같다.`,
+      [
+        { label: "뒤로", action: scenes.bedroomSearch }
+      ]
+      );
+    } else {
+      render(
+`이미 서랍은 뒤져봤다.
+안에는 아무것도 없다.`,
+      [
+        { label: "뒤로", action: scenes.bedroomSearch }
+      ]
+      );
+    }
+  },
+
+  closet() {
+    state.room = "closet";
+    render(
+`옷장 안은 비어 있다.
+하지만 안쪽 벽면에 긁힌 자국이 남아 있다.
+안에서 무언가 숨을 쉬었던 것 같은 느낌이 든다.`,
+    [
+      { label: "조용히 물러난다", action: scenes.bedroomSearch }
+    ],
+    true
+    );
+  },
+
+  leaveRoom() {
+    state.room = "hallway";
+    render(
+`문을 열고 밖으로 나가자,
+어둠 속에서 미세한 인기척이 느껴진다.
+
+지금 당장 움직이면
+들킬 것 같은 예감이 든다.`,
+    [
+      { label: "숨죽이며 기다린다", action: () => { saveState(); scenes.study(); }}
+    ]
+    );
+  },
+
+  study() {
+    state.room = "study";
+    render(
+`서재에 도착했다.
+책장에는 오래된 책들이 빼곡히 꽂혀 있다.
+이곳도 안전해 보이진 않는다.`,
+    [
+      { label: "책들을 뒤진다", action: () => {
+        render(
+`책들 사이에서 쓸모 있어 보이는 메모를 발견했지만,
+지금은 의미를 알 수 없다.`,
+        [{ label: "돌아선다", action: scenes.study }]
+        );
+      }},
+      { label: "서랍을 뒤진다", action: () => {
+        render(
+`서랍 안에는 지하로 내려가는 문에 대한 기록이 적혀 있다.
+지금은 테스트 중이라 열쇠 없이도 열릴 것 같다.`,
+        [{ label: "문으로 간다", action: scenes.kitchen }]
+        );
+      }},
+      { label: "밖으로 나간다", action: scenes.leaveRoom }
+    ],
+    true
+    );
+  },
+
+  kitchen() {
+    state.room = "kitchen";
+    render(
+`주방에 도착했다.
+다음 파트로 이어질 준비가 된 것 같다.`,
+    [
+      { label: "테스트 종료", action: () => {
+        render("여기까지가 현재 테스트 범위다.", []);
+      }}
+    ],
+    true
+    );
+  }
+
+};
+
+/* ===== 시작 ===== */
+scenes.bedroom();
 </script>
+
 </body>
 </html>
