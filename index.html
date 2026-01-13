@@ -216,3 +216,95 @@ scenes.bedroom();
 
 </body>
 </html>
+<!-- 주방 -->
+<script>
+scenes.kitchen = function () {
+  state.room = "kitchen";
+  render(
+`주방에 들어서자
+금속이 긁히는 소리가 바로 뒤에서 들린다.
+
+너를 찾고 있다.
+확실하다.`,
+  [
+    { label: "조리대 아래로 숨는다", action: () => {
+        render(
+`숨을 죽였지만,
+그림자가 바로 앞까지 다가온다.
+
+여긴 오래 버틸 수 없다.`,
+        [
+          { label: "화장실로 도망친다", action: scenes.bathroom }
+        ]
+        );
+    }}
+  ]
+  );
+};
+
+scenes.bathroom = function () {
+  state.room = "bathroom";
+  render(
+`화장실 문을 잠그고
+욕조 안으로 몸을 숨겼다.
+
+심장이 미친 듯이 뛴다.
+
+…발소리가 멀어진다.`,
+  [
+    { label: "조금 더 기다린다", action: scenes.livingroom }
+  ]
+  );
+};
+
+scenes.livingroom = function () {
+  state.room = "livingroom";
+  render(
+`거실이다.
+
+이 집의 중심.
+천장에는 희미한 카메라가 달려 있다.
+
+이제 선택의 시간이다.`,
+  [
+    { label: "지하실로 내려간다", action: scenes.basement },
+    { label: "현관으로 향한다", action: scenes.exit }
+  ],
+  true
+  );
+};
+
+scenes.basement = function () {
+  state.room = "basement";
+  render(
+`지하실 문은 예상보다 쉽게 열린다.
+
+아래로 내려갈수록
+집의 구조가 말이 안 되기 시작한다.
+
+…여기가 진짜 목적지다.`,
+  [
+    { label: "다음 파트로", action: () => {
+        render("지하실 파트는 다음 테스트에서 이어집니다.", []);
+    }}
+  ]
+  );
+};
+
+scenes.exit = function () {
+  state.room = "exit";
+  render(
+`현관문을 여는 순간,
+차가운 손이 목을 붙잡는다.
+
+너는 너무 빨리
+답을 선택했다.`,
+  [
+    { label: "엔딩", action: () => {
+        render("탈출 실패.\n\n관찰은 종료되었다.", []);
+    }}
+  ]
+  );
+};
+</script>
+
