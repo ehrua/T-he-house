@@ -2,33 +2,26 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>탈출 – 2층</title>
+<title>탈출 – 1층</title>
 <style>
-  body {
-    background:#0f0f0f;
-    color:#eaeaea;
-    font-family: "Noto Sans KR", sans-serif;
-    padding: 20px;
-  }
-  #game {
-    max-width: 720px;
-    margin: auto;
-  }
-  button {
-    display:block;
-    width:100%;
-    margin:8px 0;
-    padding:10px;
-    background:#1a1a1a;
-    color:#eee;
-    border:1px solid #444;
-    cursor:pointer;
-  }
-  button:hover { background:#2a2a2a; }
-  .back {
-    margin-top:18px;
-    border:1px dashed #555;
-  }
+body {
+  background:#0b0b0b;
+  color:#eee;
+  font-family:"Noto Sans KR", sans-serif;
+  padding:20px;
+}
+#game { max-width:760px; margin:auto; }
+button {
+  display:block;
+  width:100%;
+  margin:6px 0;
+  padding:10px;
+  background:#1a1a1a;
+  color:#eee;
+  border:1px solid #444;
+  cursor:pointer;
+}
+button:hover { background:#2a2a2a; }
 </style>
 </head>
 <body>
@@ -38,201 +31,232 @@
 </div>
 
 <script>
-const textEl = document.getElementById("text");
-const choicesEl = document.getElementById("choices");
+const text = document.getElementById("text");
+const choices = document.getElementById("choices");
 
 const state = {
-  hasPinset: false,
-  hasBasementKey: false,
-  bookshelfOpened: false,
-  hallwayChecked: false
+  caughtOnce:false,
+  basementKey:false,
+  safeKey:false,
+  frontPassword:false,
+  axe:false
 };
 
-function clearChoices() {
-  choicesEl.innerHTML = "";
+function clear() { choices.innerHTML=""; }
+function add(t,f){ const b=document.createElement("button"); b.textContent=t; b.onclick=f; choices.appendChild(b); }
+
+/* ===== 1층 시작 ===== */
+
+function floor1Start(){
+text.textContent =
+"아래층에 내려오자 인기척이 들리는 것 같다.";
+clear();
+add("싱크대 아래 숨는다", sinkHide);
+add("식탁 아래 숨는다", tableHide);
+add("도망친다", runAway);
 }
 
-function addChoice(text, fn, back=false) {
-  const b = document.createElement("button");
-  b.textContent = text;
-  if (back) b.classList.add("back");
-  b.onclick = fn;
-  choicesEl.appendChild(b);
+/* ===== 숨기 ===== */
+
+function sinkHide(){
+text.textContent =
+"저벅… 저벅… 발소리가 점점 가까워진다.\n내가 숨은 곳 바로 앞에 멈춰 섰다.\n그가 문을 연다.";
+clear();
+death();
 }
 
-/* ================= 방 ================= */
-
-function room() {
-  textEl.textContent =
-`눈을 뜨자 낯선 방이었다.
-몸이 무겁고 머리가 멍하다.
-침대, 서랍, 옷장, 그리고 문 하나가 보인다.`;
-
-  clearChoices();
-
-  addChoice("침대 밑을 살핀다", () => {
-    textEl.textContent =
-      "침대 밑에는 아무것도 없다. 오래 방치된 듯 먼지만 쌓여 있다.";
-    clearChoices();
-    addChoice("방으로 돌아간다", room, true);
-  });
-
-  addChoice("서랍을 뒤진다", () => {
-    if (!state.hasPinset) {
-      state.hasPinset = true;
-      textEl.textContent =
-        "서랍 안에서 작은 핀셋을 발견했다.";
-    } else {
-      textEl.textContent =
-        "이미 비어 있다. 더 이상 쓸만한 것은 없다.";
-    }
-    clearChoices();
-    addChoice("방으로 돌아간다", room, true);
-  });
-
-  addChoice("옷장을 연다", () => {
-    textEl.textContent =
-      "옷장 안은 비어 있다. 불길한 냄새만 남아 있다.";
-    clearChoices();
-    addChoice("문으로 간다", door);
-  });
-
-  addChoice("문으로 간다", door);
+function tableHide(){
+text.textContent =
+"식탁 아래에 몸을 숨기자 웃는 소리가 들린다.";
+clear();
+add("도망간다", runAway);
+add("맞선다", death);
 }
 
-function door() {
-  clearChoices();
-  if (state.hasPinset) {
-    textEl.textContent =
-      "핀셋을 이용해 잠긴 문을 열었다.\n문 너머로 서재가 보인다.";
-    addChoice("서재로 들어간다", study);
-  } else {
-    textEl.textContent =
-      "문은 잠겨 있다. 얇은 도구가 필요할 것 같다.";
-    addChoice("방으로 돌아간다", room, true);
-  }
+/* ===== 도망 ===== */
+
+function runAway(){
+text.textContent="숨을 참은 채 도망쳤다. 어디로 갈까?";
+clear();
+add("화장실", bathroom);
+add("2층", upstairs);
+add("거실", living);
 }
 
-/* ================= 서재 ================= */
+/* ===== 화장실 ===== */
 
-function study() {
-  textEl.textContent =
-`서재인 듯하다.
-벽면에는 사진들과 해부학 서적들이 빼곡히 꽂혀 있다.
-이곳에 오래 머문 느낌은 아니다… 하지만 충분히 섬뜩하다.`;
-
-  clearChoices();
-
-  addChoice("책들을 뒤진다", books);
-  addChoice("서랍을 뒤진다", drawer);
-  addChoice("밖으로 나간다", hallway);
+function bathroom(){
+text.textContent =
+"발소리가 화장실로 가까워진다.";
+clear();
+add("문 뒤에 숨는다", bathroomDoor);
+add("변기 뒤에 숨는다", bathroomToilet);
+add("욕조에 숨는다", bathtub);
 }
 
-/* ---------- 책 ---------- */
-
-function books() {
-  if (!state.bookshelfOpened) {
-    state.bookshelfOpened = true;
-    textEl.textContent =
-`책 하나를 잡아당긴 순간,
-책장이 갈라지며 숨겨진 공간이 드러났다.
-
-안에는 문서 한 장이 들어 있었다.
-
-이름: 판태현
-나이: 30
-직업: 무직
-주소: 서울특별시 성동구 뚝섬로…
-
-간: 양호
-신장: 양호
-각막: 양호
-기타 장기 상태 양호
-
-나는 서서히 깨달았다.
-이곳에 잡혀 온 이유를.
-아마… 장기 매매.
-
-문서 뒷면에는 급히 적은 글이 이어져 있었다.
-
-'이 글을 읽고 있다면
-당신 역시 잡혀 온 사람일 겁니다.
-
-2층: 방, 서재
-1층: 주방, 거실, 화장실, 현관, 지하실로 향하는 문
-
-탈출구는 두 곳.
-현관 — 비밀번호와 열쇠 필요
-지하실 — 도끼 열쇠 필요
-
-납치범은 단 두 번의 기회를 줍니다.
-첫 번째는 식칼.
-두 번째는 도끼.
-
-도끼를 들기 전에
-그 열쇠를 찾지 못하면
-지하실 탈출은 끝입니다.
-
-…행운을 빕니다.'`;
-
-  } else {
-    textEl.textContent = "이미 살펴본 책들이다.";
-  }
-
-  clearChoices();
-  addChoice("서재로 돌아간다", study, true);
+function bathroomDoor(){
+text.textContent =
+"아무도 없자 그는 이내 돌아갔다.\n겨우 따돌렸다.";
+safeMove();
 }
 
-/* ---------- 서랍 ---------- */
-
-function drawer() {
-  if (!state.hasBasementKey) {
-    state.hasBasementKey = true;
-    textEl.textContent =
-      "서랍 안에서 열쇠 하나를 발견했다.\n(지하실 열쇠)";
-  } else {
-    textEl.textContent = "서랍 안에는 아무것도 없다.";
-  }
-
-  clearChoices();
-  addChoice("서재로 돌아간다", study, true);
+function bathroomToilet(){
+text.textContent =
+"그가 나를 붙잡아 끌고 갔다.\n눈을 떠보니 지하실이다.";
+state.caughtOnce=true;
+basementWake();
 }
 
-/* ================= 복도 ================= */
-
-function hallway() {
-  textEl.textContent =
-`문을 열고 밖으로 나가자
-어딘가에서 인기척이 느껴진다.
-
-숨소리조차 내지 못한 채
-나는 벽에 붙어 숨을 죽였다.`;
-
-  clearChoices();
-  state.hallwayChecked = true;
-
-  addChoice("조용히 계단으로 향한다", stairs);
-  addChoice("서재로 돌아간다", study, true);
+function bathtub(){
+text.textContent =
+"욕조 안에는 피가 가득하다.";
+clear();
+add("안으로 들어간다", bathtubIn);
+add("다른 곳에 숨는다", death);
 }
 
-/* ================= 계단 ================= */
+function bathtubIn(){
+text.textContent =
+"문이 열리는 소리가 났다.\n찾는 듯하더니 문을 닫고 사라졌다.";
+safeMove();
+}
 
-function stairs() {
-  textEl.textContent =
-`계단이다.
-아래로 내려가면 1층일 것이다.
+/* ===== 자유 이동 ===== */
 
-여기서부터가 진짜 시작이다.`;
+function safeMove(){
+clear();
+add("주방", kitchen);
+add("2층", upstairs);
+add("거실", living);
+add("지하실", basementCheck);
+}
 
-  clearChoices();
-  addChoice("1층으로 내려간다", () => {
-    textEl.textContent = "※ 2층 파트 종료 (1층으로 이동)";
-    clearChoices();
-  });
+/* ===== 주방 ===== */
+
+function kitchen(){
+text.textContent="주방이다. 어디를 뒤질까?";
+clear();
+add("냉장고", ()=>simple("별게 없다.", kitchen));
+add("전자레인지", microwave);
+add("싱크대", ()=>simple("안에 별다른 건 없다.\n숨기에는 좋아 보인다.", kitchen));
+}
+
+function microwave(){
+if(!state.basementKey){
+  state.basementKey=true;
+  text.textContent="전자레인지 안에서 열쇠를 발견했다.\n(지하실 열쇠)";
+}else{
+  text.textContent="이미 비어 있다.";
+}
+clear();
+add("돌아간다", kitchen);
+}
+
+/* ===== 거실 ===== */
+
+function living(){
+text.textContent="거실이다. 서랍, 옷장, TV가 있다.";
+clear();
+add("서랍", drawer);
+add("옷장", ()=>simple("안에는 아무것도 없다.\n숨기엔 좋아 보인다.", living));
+add("TV", tv);
+}
+
+function drawer(){
+if(!state.safeKey){
+  state.safeKey=true;
+  text.textContent="서랍에서 열쇠를 얻었다.\n'금고 열쇠'라고 적혀 있다.";
+}else{
+  text.textContent="이미 비어 있다.";
+}
+clear();
+add("돌아간다", living);
+}
+
+function tv(){
+state.frontPassword=true;
+text.textContent =
+"TV에서는 예능 프로그램이 나오고 있다.\n정답은 3849라고 한다.\n혹시… 현관 비밀번호?";
+clear();
+add("돌아간다", living);
+}
+
+/* ===== 2층 ===== */
+
+function upstairs(){
+text.textContent =
+"그를 발견했다.\n하지만 그는 나를 아직 눈치채지 못한 모양이다.";
+clear();
+add("주방", kitchen);
+add("거실", living);
+add("지하실", basementCheck);
+}
+
+/* ===== 지하실 ===== */
+
+function basementCheck(){
+if(!state.basementKey){
+text.textContent =
+"지하실 문은 잠겨 있다.\n서재에서 얻었던 열쇠가 떠오른다.";
+clear();
+add("돌아간다", safeMove);
+}else{
+basement();
+}
+}
+
+function basement(){
+text.textContent =
+"지하실은 생각보다 어둡지 않다.\n곳곳에 곰덫이 깔려 있다.";
+clear();
+add("문", ()=>simple("이게 나가는 문인가?", basement));
+add("선반", shelf);
+add("금고", safeBox);
+}
+
+function shelf(){
+if(!state.caughtOnce && !state.axe){
+state.axe=true;
+text.textContent="선반에서 도끼를 발견했다.";
+}else{
+text.textContent="비어 있다.";
+}
+clear();
+add("돌아간다", basement);
+}
+
+function safeBox(){
+if(state.safeKey){
+text.textContent="금고 안에서 현관 열쇠를 얻었다.";
+}else{
+text.textContent="열쇠가 필요하다.";
+}
+clear();
+add("돌아간다", basement);
+}
+
+/* ===== 기타 ===== */
+
+function basementWake(){
+text.textContent =
+"문이 잠겨 있다.\n핀셋으로 문을 열고 빠져나왔다.\n그는 도끼를 들고 있다.\n지하실 탈출은 물 건너갔다.";
+clear();
+safeMove();
+}
+
+function simple(msg,back){
+text.textContent=msg;
+clear();
+add("돌아간다", back);
+}
+
+function death(){
+clear();
+add("사망", ()=>text.textContent="사망…");
 }
 
 /* 시작 */
-room();
+floor1Start();
 </script>
 </body>
 </html>
