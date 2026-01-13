@@ -9,7 +9,10 @@ body {
   color:#eee;
   font-family:Malgun Gothic, sans-serif;
 }
-#game { max-width:600px; margin:auto; }
+#game {
+  max-width:600px;
+  margin:auto;
+}
 button {
   display:block;
   margin:6px 0;
@@ -19,7 +22,10 @@ button {
   border:1px solid #555;
 }
 button:hover { background:#333; }
-#backBtn { opacity:0.7; }
+#backBtn {
+  opacity:0.7;
+  margin-bottom:10px;
+}
 </style>
 </head>
 <body>
@@ -39,7 +45,7 @@ let history = [];
 let canGoBack = true;
 
 let inventory = {
-  pinset:false
+  pinset: false
 };
 
 function clearUI() {
@@ -53,12 +59,6 @@ function addChoice(label, action) {
   choices.appendChild(btn);
 }
 
-backBtn.onclick = () => {
-  if (!canGoBack || history.length <= 1) return;
-  history.pop();
-  history[history.length - 1]();
-};
-
 function go(scene, backable = true) {
   canGoBack = backable;
   backBtn.style.display = backable ? "block" : "none";
@@ -66,6 +66,13 @@ function go(scene, backable = true) {
   clearUI();
   scene();
 }
+
+backBtn.onclick = () => {
+  if (!canGoBack || history.length <= 1) return;
+  history.pop();
+  clearUI();
+  history[history.length - 1]();
+};
 
 /* ───── SCENES ───── */
 
@@ -91,43 +98,60 @@ function wakeUp() {
 function room() {
   text.innerHTML = "방 안에는 침대, 서랍, 옷장이 있다.";
   addChoice("침대 밑", () => {
+    clearUI();
     text.innerHTML = "사람 같은 것이 있다… 시체인 듯하다.";
+    addChoice("뒤로", () => backBtn.click());
   });
   addChoice("서랍", () => go(drawer));
   addChoice("옷장", () => {
+    clearUI();
     text.innerHTML = "옷장은 비어 있다. 숨기엔 좋아 보인다.";
+    addChoice("뒤로", () => backBtn.click());
   });
 }
 
 function drawer() {
-  inventory.pinset = true;
-  text.innerHTML = `
+  clearUI();
+  if (!inventory.pinset) {
+    inventory.pinset = true;
+    text.innerHTML = `
 서랍에서 핀셋을 발견했다.<br>
-이걸로 문을 열 수 있을 것 같다.
+이거라면 문을 열 수 있을 것 같다.
 `;
-  addChoice("문으로 간다", () => go(unlockDoor));
+    addChoice("문으로 간다", () => go(lockedDoor));
+  } else {
+    text.innerHTML = "서랍 안에는 아무것도 없다.";
+    addChoice("뒤로", () => backBtn.click());
+  }
 }
 
 function lockedDoor() {
+  clearUI();
   text.innerHTML = "문은 잠겨 있다.";
   if (inventory.pinset) {
     addChoice("핀셋을 사용한다", () => go(unlockDoor));
+  } else {
+    addChoice("뒤로", () => backBtn.click());
   }
 }
 
 function unlockDoor() {
+  clearUI();
   text.innerHTML = "철컥… 문이 열렸다.";
-  addChoice("계단으로 간다", () => {
-    text.innerHTML = "다음 구간 진행 가능";
+  addChoice("계단으로 내려간다", () => {
+    text.innerHTML = "다음 파트로 진행 가능";
+    clearUI();
   });
 }
 
 function waiting() {
+  clearUI();
   text.innerHTML = `
 10분쯤 지났을까.<br>
 발소리가 점점 가까워진다…
 `;
   addChoice("가만히 있는다", () => {
+    clearUI();
     text.innerHTML = "“깨어있네?”<br><b>사망</b>";
   });
 }
@@ -135,5 +159,6 @@ function waiting() {
 /* START */
 go(intro);
 </script>
+
 </body>
 </html>
