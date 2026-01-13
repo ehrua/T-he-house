@@ -2,163 +2,181 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>탈출</title>
+<title>탈출 – 2층</title>
 <style>
-body {
-  background:#000;
-  color:#eee;
-  font-family:Malgun Gothic, sans-serif;
-}
-#game {
-  max-width:600px;
-  margin:auto;
-}
-button {
-  display:block;
-  margin:6px 0;
-  padding:8px;
-  background:#111;
-  color:#eee;
-  border:1px solid #555;
-}
-button:hover { background:#333; }
-#backBtn {
-  opacity:0.7;
-  margin-bottom:10px;
-}
+  body {
+    background:#111;
+    color:#eee;
+    font-family: "Noto Sans KR", sans-serif;
+    padding: 20px;
+  }
+  #game {
+    max-width: 700px;
+    margin: auto;
+  }
+  button {
+    display: block;
+    margin: 8px 0;
+    padding: 10px;
+    width: 100%;
+    background:#222;
+    color:#eee;
+    border:1px solid #444;
+    cursor:pointer;
+  }
+  button:hover {
+    background:#333;
+  }
+  .back {
+    background:#111;
+    border:1px dashed #555;
+    margin-top: 20px;
+  }
 </style>
 </head>
 <body>
-
 <div id="game">
-  <button id="backBtn">← 뒤로 가기</button>
-  <div id="text"></div>
+  <p id="text"></p>
   <div id="choices"></div>
 </div>
 
 <script>
-const text = document.getElementById("text");
-const choices = document.getElementById("choices");
-const backBtn = document.getElementById("backBtn");
+const textEl = document.getElementById("text");
+const choicesEl = document.getElementById("choices");
 
-let history = [];
-let canGoBack = true;
-
-let inventory = {
-  pinset: false
+const state = {
+  location: "room",
+  hasPinset: false,
+  hasBasementKey: false,
+  bookshelfOpened: false
 };
 
-function clearUI() {
-  choices.innerHTML = "";
+function clearChoices() {
+  choicesEl.innerHTML = "";
 }
 
-function addChoice(label, action) {
+function addChoice(label, action, isBack=false) {
   const btn = document.createElement("button");
   btn.textContent = label;
+  if (isBack) btn.classList.add("back");
   btn.onclick = action;
-  choices.appendChild(btn);
+  choicesEl.appendChild(btn);
 }
 
-function go(scene, backable = true) {
-  canGoBack = backable;
-  backBtn.style.display = backable ? "block" : "none";
-  history.push(scene);
-  clearUI();
-  scene();
-}
+function showRoom() {
+  state.location = "room";
+  textEl.textContent =
+    "어두운 방이다. 침대, 옷장, 서랍, 그리고 문이 보인다.";
+  clearChoices();
 
-backBtn.onclick = () => {
-  if (!canGoBack || history.length <= 1) return;
-  history.pop();
-  clearUI();
-  history[history.length - 1]();
-};
-
-/* ───── SCENES ───── */
-
-function intro() {
-  text.innerHTML = `
-여느 날과 같은 새벽이다.<br>
-대인 기피증 때문에 사람이 없는 새벽에 강아지 산책을 나왔다.<br>
-퍽 소리와 함께 기억을 잃었다.
-`;
-  addChoice("다음", () => go(wakeUp));
-}
-
-function wakeUp() {
-  text.innerHTML = `
-눈을 떠보니 어느 집이다.<br>
-창문은 모두 신문지와 나무 판자로 막혀 있다.
-`;
-  addChoice("나간다", () => go(lockedDoor));
-  addChoice("방을 살핀다", () => go(room));
-  addChoice("대기한다", () => go(waiting, false));
-}
-
-function room() {
-  text.innerHTML = "방 안에는 침대, 서랍, 옷장이 있다.";
-  addChoice("침대 밑", () => {
-    clearUI();
-    text.innerHTML = "사람 같은 것이 있다… 시체인 듯하다.";
-    addChoice("뒤로", () => backBtn.click());
+  addChoice("침대 밑을 살핀다", () => {
+    textEl.textContent = "아무것도 없다. 먼지만 가득하다.";
+    clearChoices();
+    addChoice("방으로 돌아간다", showRoom, true);
   });
-  addChoice("서랍", () => go(drawer));
-  addChoice("옷장", () => {
-    clearUI();
-    text.innerHTML = "옷장은 비어 있다. 숨기엔 좋아 보인다.";
-    addChoice("뒤로", () => backBtn.click());
+
+  addChoice("서랍을 뒤진다", () => {
+    if (!state.hasPinset) {
+      state.hasPinset = true;
+      textEl.textContent = "서랍 안에서 핀셋을 발견했다.";
+    } else {
+      textEl.textContent = "서랍 안에는 아무것도 없다.";
+    }
+    clearChoices();
+    addChoice("방으로 돌아간다", showRoom, true);
   });
+
+  addChoice("옷장을 연다", () => {
+    textEl.textContent = "옷장 안은 비어 있다. 하지만 뒤로 갈 수는 없다.";
+    clearChoices();
+    addChoice("문으로 간다", tryDoor);
+  });
+
+  addChoice("문으로 간다", tryDoor);
 }
 
-function drawer() {
-  clearUI();
-  if (!inventory.pinset) {
-    inventory.pinset = true;
-    text.innerHTML = `
-서랍에서 핀셋을 발견했다.<br>
-이거라면 문을 열 수 있을 것 같다.
-`;
-    addChoice("문으로 간다", () => go(lockedDoor));
+function tryDoor() {
+  clearChoices();
+  if (state.hasPinset) {
+    textEl.textContent =
+      "핀셋으로 문을 열었다. 복도 너머로 서재가 보인다.";
+    addChoice("서재로 들어간다", showStudy);
   } else {
-    text.innerHTML = "서랍 안에는 아무것도 없다.";
-    addChoice("뒤로", () => backBtn.click());
+    textEl.textContent =
+      "문은 잠겨 있다. 무언가 얇은 도구가 필요할 것 같다.";
+    addChoice("방으로 돌아간다", showRoom, true);
   }
 }
 
-function lockedDoor() {
-  clearUI();
-  text.innerHTML = "문은 잠겨 있다.";
-  if (inventory.pinset) {
-    addChoice("핀셋을 사용한다", () => go(unlockDoor));
-  } else {
-    addChoice("뒤로", () => backBtn.click());
-  }
+function showStudy() {
+  state.location = "study";
+  textEl.textContent =
+    "서재인 듯하다. 사진과 해부학 서적들이 가득 쌓여 있다.";
+  clearChoices();
+
+  addChoice("책들을 뒤진다", () => {
+    if (!state.bookshelfOpened) {
+      state.bookshelfOpened = true;
+      textEl.textContent =
+`책 하나를 잡아당기자 숨겨진 공간이 열렸다.
+
+'이 글을 읽고 있다면 당신도 잡혀 왔겠죠.
+2층: 방, 서재
+1층: 주방, 거실, 화장실, 지하실로 향하는 문, 현관
+
+탈출구는 두 곳.
+현관: 비밀번호와 열쇠 필요
+지하실: 도끼 열쇠 필요
+
+납치범은 두 번의 기회를 준다.
+첫 번째는 식칼, 두 번째는 도끼.
+도끼를 들기 전에 찾아라.'
+
+글은 그렇게 끝나 있었다.`;
+    } else {
+      textEl.textContent = "이미 살펴본 책들이다.";
+    }
+    clearChoices();
+    addChoice("서재로 돌아간다", showStudy, true);
+  });
+
+  addChoice("서랍을 뒤진다", () => {
+    if (!state.hasBasementKey) {
+      state.hasBasementKey = true;
+      textEl.textContent =
+        "서랍에서 열쇠 하나를 발견했다. (지하실 열쇠)";
+    } else {
+      textEl.textContent = "서랍 안은 비어 있다.";
+    }
+    clearChoices();
+    addChoice("서재로 돌아간다", showStudy, true);
+  });
+
+  addChoice("밖으로 나간다", () => {
+    textEl.textContent =
+      "문 앞에 누군가 서 있다. 눈이 마주친 순간, 의식이 끊겼다...";
+    clearChoices();
+    addChoice("지하실로 끌려간다", () => {
+      textEl.textContent = "※ 2층 파트 종료 (지하실 파트로 이동)";
+      clearChoices();
+    });
+  });
+
+  addChoice("계단으로 간다", showStairs);
 }
 
-function unlockDoor() {
-  clearUI();
-  text.innerHTML = "철컥… 문이 열렸다.";
-  addChoice("계단으로 내려간다", () => {
-    text.innerHTML = "다음 파트로 진행 가능";
-    clearUI();
+function showStairs() {
+  textEl.textContent =
+    "계단 앞이다. 아래로 내려가면 1층으로 이어질 것 같다.";
+  clearChoices();
+  addChoice("1층으로 내려간다", () => {
+    textEl.textContent = "※ 2층 파트 종료 (1층 시작 지점)";
+    clearChoices();
   });
 }
 
-function waiting() {
-  clearUI();
-  text.innerHTML = `
-10분쯤 지났을까.<br>
-발소리가 점점 가까워진다…
-`;
-  addChoice("가만히 있는다", () => {
-    clearUI();
-    text.innerHTML = "“깨어있네?”<br><b>사망</b>";
-  });
-}
-
-/* START */
-go(intro);
+// 시작
+showRoom();
 </script>
-
 </body>
 </html>
