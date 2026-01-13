@@ -5,32 +5,29 @@
 <title>탈출 – 2층</title>
 <style>
   body {
-    background:#111;
-    color:#eee;
+    background:#0f0f0f;
+    color:#eaeaea;
     font-family: "Noto Sans KR", sans-serif;
     padding: 20px;
   }
   #game {
-    max-width: 700px;
+    max-width: 720px;
     margin: auto;
   }
   button {
-    display: block;
-    margin: 8px 0;
-    padding: 10px;
-    width: 100%;
-    background:#222;
+    display:block;
+    width:100%;
+    margin:8px 0;
+    padding:10px;
+    background:#1a1a1a;
     color:#eee;
     border:1px solid #444;
     cursor:pointer;
   }
-  button:hover {
-    background:#333;
-  }
+  button:hover { background:#2a2a2a; }
   .back {
-    background:#111;
+    margin-top:18px;
     border:1px dashed #555;
-    margin-top: 20px;
   }
 </style>
 </head>
@@ -45,138 +42,197 @@ const textEl = document.getElementById("text");
 const choicesEl = document.getElementById("choices");
 
 const state = {
-  location: "room",
   hasPinset: false,
   hasBasementKey: false,
-  bookshelfOpened: false
+  bookshelfOpened: false,
+  hallwayChecked: false
 };
 
 function clearChoices() {
   choicesEl.innerHTML = "";
 }
 
-function addChoice(label, action, isBack=false) {
-  const btn = document.createElement("button");
-  btn.textContent = label;
-  if (isBack) btn.classList.add("back");
-  btn.onclick = action;
-  choicesEl.appendChild(btn);
+function addChoice(text, fn, back=false) {
+  const b = document.createElement("button");
+  b.textContent = text;
+  if (back) b.classList.add("back");
+  b.onclick = fn;
+  choicesEl.appendChild(b);
 }
 
-function showRoom() {
-  state.location = "room";
+/* ================= 방 ================= */
+
+function room() {
   textEl.textContent =
-    "어두운 방이다. 침대, 옷장, 서랍, 그리고 문이 보인다.";
+`눈을 뜨자 낯선 방이었다.
+몸이 무겁고 머리가 멍하다.
+침대, 서랍, 옷장, 그리고 문 하나가 보인다.`;
+
   clearChoices();
 
   addChoice("침대 밑을 살핀다", () => {
-    textEl.textContent = "아무것도 없다. 먼지만 가득하다.";
+    textEl.textContent =
+      "침대 밑에는 아무것도 없다. 오래 방치된 듯 먼지만 쌓여 있다.";
     clearChoices();
-    addChoice("방으로 돌아간다", showRoom, true);
+    addChoice("방으로 돌아간다", room, true);
   });
 
   addChoice("서랍을 뒤진다", () => {
     if (!state.hasPinset) {
       state.hasPinset = true;
-      textEl.textContent = "서랍 안에서 핀셋을 발견했다.";
+      textEl.textContent =
+        "서랍 안에서 작은 핀셋을 발견했다.";
     } else {
-      textEl.textContent = "서랍 안에는 아무것도 없다.";
+      textEl.textContent =
+        "이미 비어 있다. 더 이상 쓸만한 것은 없다.";
     }
     clearChoices();
-    addChoice("방으로 돌아간다", showRoom, true);
+    addChoice("방으로 돌아간다", room, true);
   });
 
   addChoice("옷장을 연다", () => {
-    textEl.textContent = "옷장 안은 비어 있다. 하지만 뒤로 갈 수는 없다.";
+    textEl.textContent =
+      "옷장 안은 비어 있다. 불길한 냄새만 남아 있다.";
     clearChoices();
-    addChoice("문으로 간다", tryDoor);
+    addChoice("문으로 간다", door);
   });
 
-  addChoice("문으로 간다", tryDoor);
+  addChoice("문으로 간다", door);
 }
 
-function tryDoor() {
+function door() {
   clearChoices();
   if (state.hasPinset) {
     textEl.textContent =
-      "핀셋으로 문을 열었다. 복도 너머로 서재가 보인다.";
-    addChoice("서재로 들어간다", showStudy);
+      "핀셋을 이용해 잠긴 문을 열었다.\n문 너머로 서재가 보인다.";
+    addChoice("서재로 들어간다", study);
   } else {
     textEl.textContent =
-      "문은 잠겨 있다. 무언가 얇은 도구가 필요할 것 같다.";
-    addChoice("방으로 돌아간다", showRoom, true);
+      "문은 잠겨 있다. 얇은 도구가 필요할 것 같다.";
+    addChoice("방으로 돌아간다", room, true);
   }
 }
 
-function showStudy() {
-  state.location = "study";
+/* ================= 서재 ================= */
+
+function study() {
   textEl.textContent =
-    "서재인 듯하다. 사진과 해부학 서적들이 가득 쌓여 있다.";
+`서재인 듯하다.
+벽면에는 사진들과 해부학 서적들이 빼곡히 꽂혀 있다.
+이곳에 오래 머문 느낌은 아니다… 하지만 충분히 섬뜩하다.`;
+
   clearChoices();
 
-  addChoice("책들을 뒤진다", () => {
-    if (!state.bookshelfOpened) {
-      state.bookshelfOpened = true;
-      textEl.textContent =
-`책 하나를 잡아당기자 숨겨진 공간이 열렸다.
+  addChoice("책들을 뒤진다", books);
+  addChoice("서랍을 뒤진다", drawer);
+  addChoice("밖으로 나간다", hallway);
+}
 
-'이 글을 읽고 있다면 당신도 잡혀 왔겠죠.
+/* ---------- 책 ---------- */
+
+function books() {
+  if (!state.bookshelfOpened) {
+    state.bookshelfOpened = true;
+    textEl.textContent =
+`책 하나를 잡아당긴 순간,
+책장이 갈라지며 숨겨진 공간이 드러났다.
+
+안에는 문서 한 장이 들어 있었다.
+
+이름: 판태현
+나이: 30
+직업: 무직
+주소: 서울특별시 성동구 뚝섬로…
+
+간: 양호
+신장: 양호
+각막: 양호
+기타 장기 상태 양호
+
+나는 서서히 깨달았다.
+이곳에 잡혀 온 이유를.
+아마… 장기 매매.
+
+문서 뒷면에는 급히 적은 글이 이어져 있었다.
+
+'이 글을 읽고 있다면
+당신 역시 잡혀 온 사람일 겁니다.
+
 2층: 방, 서재
-1층: 주방, 거실, 화장실, 지하실로 향하는 문, 현관
+1층: 주방, 거실, 화장실, 현관, 지하실로 향하는 문
 
 탈출구는 두 곳.
-현관: 비밀번호와 열쇠 필요
-지하실: 도끼 열쇠 필요
+현관 — 비밀번호와 열쇠 필요
+지하실 — 도끼 열쇠 필요
 
-납치범은 두 번의 기회를 준다.
-첫 번째는 식칼, 두 번째는 도끼.
-도끼를 들기 전에 찾아라.'
+납치범은 단 두 번의 기회를 줍니다.
+첫 번째는 식칼.
+두 번째는 도끼.
 
-글은 그렇게 끝나 있었다.`;
-    } else {
-      textEl.textContent = "이미 살펴본 책들이다.";
-    }
-    clearChoices();
-    addChoice("서재로 돌아간다", showStudy, true);
-  });
+도끼를 들기 전에
+그 열쇠를 찾지 못하면
+지하실 탈출은 끝입니다.
 
-  addChoice("서랍을 뒤진다", () => {
-    if (!state.hasBasementKey) {
-      state.hasBasementKey = true;
-      textEl.textContent =
-        "서랍에서 열쇠 하나를 발견했다. (지하실 열쇠)";
-    } else {
-      textEl.textContent = "서랍 안은 비어 있다.";
-    }
-    clearChoices();
-    addChoice("서재로 돌아간다", showStudy, true);
-  });
+…행운을 빕니다.'`;
 
-  addChoice("밖으로 나간다", () => {
-    textEl.textContent =
-      "문 앞에 누군가 서 있다. 눈이 마주친 순간, 의식이 끊겼다...";
-    clearChoices();
-    addChoice("지하실로 끌려간다", () => {
-      textEl.textContent = "※ 2층 파트 종료 (지하실 파트로 이동)";
-      clearChoices();
-    });
-  });
+  } else {
+    textEl.textContent = "이미 살펴본 책들이다.";
+  }
 
-  addChoice("계단으로 간다", showStairs);
+  clearChoices();
+  addChoice("서재로 돌아간다", study, true);
 }
 
-function showStairs() {
+/* ---------- 서랍 ---------- */
+
+function drawer() {
+  if (!state.hasBasementKey) {
+    state.hasBasementKey = true;
+    textEl.textContent =
+      "서랍 안에서 열쇠 하나를 발견했다.\n(지하실 열쇠)";
+  } else {
+    textEl.textContent = "서랍 안에는 아무것도 없다.";
+  }
+
+  clearChoices();
+  addChoice("서재로 돌아간다", study, true);
+}
+
+/* ================= 복도 ================= */
+
+function hallway() {
   textEl.textContent =
-    "계단 앞이다. 아래로 내려가면 1층으로 이어질 것 같다.";
+`문을 열고 밖으로 나가자
+어딘가에서 인기척이 느껴진다.
+
+숨소리조차 내지 못한 채
+나는 벽에 붙어 숨을 죽였다.`;
+
+  clearChoices();
+  state.hallwayChecked = true;
+
+  addChoice("조용히 계단으로 향한다", stairs);
+  addChoice("서재로 돌아간다", study, true);
+}
+
+/* ================= 계단 ================= */
+
+function stairs() {
+  textEl.textContent =
+`계단이다.
+아래로 내려가면 1층일 것이다.
+
+여기서부터가 진짜 시작이다.`;
+
   clearChoices();
   addChoice("1층으로 내려간다", () => {
-    textEl.textContent = "※ 2층 파트 종료 (1층 시작 지점)";
+    textEl.textContent = "※ 2층 파트 종료 (1층으로 이동)";
     clearChoices();
   });
 }
 
-// 시작
-showRoom();
+/* 시작 */
+room();
 </script>
 </body>
 </html>
