@@ -49,7 +49,6 @@ const state={
 };
 
 function render(text,options=[],back=false){
-  game.innerHTML="";
   game.innerHTML=text;
 
   if(back && state.history.length){
@@ -76,50 +75,39 @@ render(`
 <div class="part">
 <h2>PART 0 : 새벽의 공원</h2>
 <p>
-사람이 없는 새벽, 강아지와 산책을 나왔다.<br>
-강아지가 갑자기 멈춰 섰다.<br><br>
+사람이 없는 새벽, 강아지와 산책 중이었다.<br>
+강아지가 멈춰 섰다.<br><br>
 퍽.<br><br>
-뒤통수에 충격이 느껴지고 의식이 끊겼다.
+뒤통수의 충격과 함께 시야가 끊겼다.
 </p>
 </div>
 `,[{text:"눈을 뜬다",action:room}]);
 }
 
-/* ================= PART 1 ================= */
+/* ================= PART 1 : 방 ================= */
 function room(){
 render(`
 <div class="part">
 <h2>PART 1 : 방</h2>
 <p>
 신문지로 막힌 창문.<br>
-여긴 감금된 장소다.
+잠긴 문.<br>
+여긴 탈출해야 한다.
 </p>
 </div>
 `,[
 {text:"문으로 간다",action:door},
 {text:"방을 살핀다",action:searchRoom},
-{text:"대기한다",action:wait}
-]);
-}
-
-function door(){
-if(!state.tweezers){
-render(`<p>문이 잠겨 있다. 도구가 필요하다.</p>`,[
-{text:"뒤로",action:room}
-]);
-return;
-}
-render(`<p>핀셋으로 문을 열었다.</p>`,[
-{text:"나간다",action:secondFloor}
+{text:"가만히 있는다",action:wait}
 ]);
 }
 
 function searchRoom(){
 render(`
 <p>
-장기 매매 문서다.<br>
-이름: 판태현<br><br>
-목적을 알았다.
+장기 매매 기록이다.<br>
+이름: 판태현.<br>
+목적은 명확하다.
 </p>
 `,[
 {text:"서랍",action:getTweezers},
@@ -140,27 +128,42 @@ render(`<p>핀셋을 얻었다.</p>`,[
 ]);
 }
 
+function door(){
+if(!state.tweezers){
+render(`<p>문이 잠겨 있다.</p>`,[
+{text:"뒤로",action:room}
+]);
+return;
+}
+render(`<p>핀셋으로 문을 열었다.</p>`,[
+{text:"밖으로",action:secondFloor}
+]);
+}
+
 function wait(){
 state.caught++;
 if(state.caught===1){
-render(`<p>문이 열린다… 칼이 보인다.</p>`,[
-{text:"눈을 뜬다",action:basementCaptured}
+render(`<p>문이 열린다.<br>손에 든 것은 칼이다.</p>`,[
+{text:"정신을 잃는다",action:basementCaptured}
 ]);
 }else{
 death();
 }
 }
 
-/* ================= PART 2 ================= */
+/* ================= PART 2 : 2층 ================= */
 function secondFloor(){
 render(`
 <div class="part">
 <h2>PART 2 : 2층</h2>
-<p>집은 생각보다 넓다.</p>
+<p>
+집 안은 고요하다.<br>
+하지만 오래 머물 수는 없다.
+</p>
 </div>
 `,[
 {text:"서재",action:library},
-{text:"계단",action:kitchen}
+{text:"계단으로 내려간다",action:kitchen}
 ]);
 }
 
@@ -168,11 +171,11 @@ function library(){
 render(`
 <div class="part">
 <h2>서재</h2>
-<p>해부학 책들.</p>
+<p>해부학 책과 사진.</p>
 </div>
 `,[
-{text:"메모",action:memo},
-{text:"서랍",action:getBasementKey},
+{text:"메모를 읽는다",action:memo},
+{text:"서랍을 뒤진다",action:getBasementKey},
 {text:"나간다",action:caughtMove}
 ],true);
 }
@@ -180,9 +183,10 @@ render(`
 function memo(){
 render(`
 <p><i>
+탈출은 두 갈래.<br>
 현관은 비밀번호와 열쇠.<br>
-지하실은 기회.<br>
-두 번은 없다.
+지하실은 위험하지만 기회다.<br><br>
+그는 두 번은 용서하지 않는다.
 </i></p>
 `,[{text:"뒤로",action:library}]);
 }
@@ -194,6 +198,7 @@ render(`<p>지하실 열쇠를 얻었다.</p>`,[
 ]);
 }
 
+/* ================= 잡힘 처리 ================= */
 function caughtMove(){
 state.caught++;
 if(state.caught===1){
@@ -203,49 +208,81 @@ death();
 }
 }
 
-/* ================= CAPTURE ================= */
 function basementCaptured(){
 render(`
 <div class="part">
 <h2>지하실</h2>
-<p>이번엔 도끼다.</p>
+<p>
+눈을 뜨니 지하실이다.<br>
+이번엔 도끼다.
+</p>
 </div>
 `,[
 {text:"버틴다",action:secondFloor}
 ]);
 }
 
-/* ================= PART 3 ================= */
+/* ================= PART 3 : 주방 ================= */
 function kitchen(){
 render(`
 <div class="part">
 <h2>PART 3 : 주방</h2>
-<p>인기척.</p>
+<p>
+냉장고의 모터 소리.<br>
+뒤에서 발소리가 난다.
+</p>
 </div>
 `,[
-{text:"도망",action:bathroom},
-{text:"숨는다",action:caughtMove}
+{text:"싱크대 아래로 숨는다",action:caughtMove},
+{text:"식탁 뒤로 몸을 던진다",action:laugh},
+{text:"화장실로 도망친다",action:bathroom}
 ]);
 }
 
+function laugh(){
+render(`<p>웃음소리가 들린다.</p>`,[
+{text:"화장실로 도망",action:bathroom},
+{text:"버틴다",action:caughtMove}
+]);
+}
+
+/* ================= 화장실 ================= */
 function bathroom(){
-render(`<p>숨을 곳은?</p>`,[
+render(`
+<div class="part">
+<h2>화장실</h2>
+<p>
+문을 잠갔다.<br>
+숨을 곳을 골라야 한다.
+</p>
+</div>
+`,[
 {text:"문 뒤",action:livingroom},
-{text:"욕조",action:caughtMove}
+{text:"욕조 안",action:caughtMove},
+{text:"변기 뒤",action:caughtMove}
 ]);
 }
 
-/* ================= PART 4 ================= */
+/* ================= PART 4 : 거실 ================= */
 function livingroom(){
 render(`
 <div class="part">
 <h2>PART 4 : 거실</h2>
-<p>거실이다.</p>
+<p>
+잠시 숨이 멎는다.<br>
+여긴 갈림길이다.
+</p>
 </div>
 `,[
 {text:"TV",action:tv},
 {text:"서랍",action:livingDrawer},
 {text:"지하실",action:basement}
+]);
+}
+
+function tv(){
+render(`<p>TV에서 숫자 3849가 반복된다.</p>`,[
+{text:"뒤로",action:livingroom}
 ]);
 }
 
@@ -256,13 +293,7 @@ render(`<p>서랍에서 금고 열쇠를 얻었다.</p>`,[
 ]);
 }
 
-function tv(){
-render(`<p>TV에서 숫자 3849.</p>`,[
-{text:"뒤로",action:livingroom}
-]);
-}
-
-/* ================= PART 5 ================= */
+/* ================= PART 5 : 지하실 ================= */
 function basement(){
 if(!state.basementKey){
 render(`<p>지하실은 잠겨 있다.</p>`,[
@@ -273,11 +304,13 @@ return;
 render(`
 <div class="part">
 <h2>PART 5 : 지하실</h2>
-<p>금고와 판자로 막힌 출구.</p>
+<p>
+금고와 판자로 막힌 출구.
+</p>
 </div>
 `,[
 {text:"금고",action:safe},
-{text:"지하실 탈출",action:basementEscape}
+{text:"판자를 조사한다",action:basementEscape}
 ]);
 }
 
@@ -296,7 +329,7 @@ render(`<p>현관 열쇠를 얻었다.</p>`,[
 
 function basementEscape(){
 if(state.caught>0 || !state.frontKey){
-render(`<p>조건이 맞지 않는다.</p>`,[
+render(`<p>조건이 맞지 않는다.<br>지금은 탈출할 수 없다.</p>`,[
 {text:"뒤로",action:basement}
 ]);
 return;
@@ -305,13 +338,14 @@ render(`
 <h2>지하실 탈출 엔딩</h2>
 <p>
 도끼로 판자를 부쉈다.<br>
-밖이다.
+차가운 공기가 들어온다.<br>
+살아남았다.
 </p>
 `);
 }
 
 function death(){
-render(`<h2>사망</h2><p>두 번째 기회는 없다.</p>`);
+render(`<h2>사망</h2><p>두 번째 실수는 끝이다.</p>`);
 }
 
 part0();
