@@ -5,38 +5,32 @@
 <title>탈출</title>
 <style>
 body{
-background:#000;
-color:#eee;
-font-family:monospace;
-padding:20px;
+  background:#000;
+  color:#eee;
+  font-family:"Noto Serif KR",serif;
+  line-height:1.7;
 }
 #game{
-max-width:700px;
-margin:auto;
+  max-width:820px;
+  margin:40px auto;
+  padding:20px;
+}
+.part{
+  border-top:2px solid #333;
+  margin-top:30px;
+  padding-top:20px;
 }
 button{
-margin:5px;
-padding:8px 14px;
-background:#111;
-color:#eee;
-border:1px solid #555;
-cursor:pointer;
+  width:100%;
+  padding:12px;
+  margin:10px 0;
+  background:#111;
+  color:#eee;
+  border:1px solid #444;
+  cursor:pointer;
 }
-button:hover{
-background:#333;
-}
-input{
-background:#000;
-color:#0f0;
-border:1px solid #555;
-padding:5px;
-text-align:center;
-font-size:18px;
-width:120px;
-}
-.ui{
-margin-top:10px;
-}
+button:hover{background:#222;}
+h2{margin-top:0;}
 </style>
 </head>
 <body>
@@ -46,105 +40,244 @@ margin-top:10px;
 const game=document.getElementById("game");
 
 const state={
-caught:0,
-basementKey:false,
-safeKey:false,
-frontKey:false
+  tweezers:false,
+  basementKey:false,
+  safeKey:false,
+  frontKey:false,
+  caught:0,
+  history:[]
 };
 
-function render(text,choices=[]){
-game.innerHTML=text;
-choices.forEach(c=>{
-const b=document.createElement("button");
-b.innerText=c.text;
-b.onclick=c.action;
-game.appendChild(b);
-});
+function render(text,options=[],back=false){
+  game.innerHTML="";
+  game.innerHTML=text;
+
+  if(back && state.history.length){
+    const b=document.createElement("button");
+    b.innerText="뒤로 가기";
+    b.onclick=()=>state.history.pop()();
+    game.appendChild(b);
+  }
+
+  options.forEach(o=>{
+    const btn=document.createElement("button");
+    btn.innerText=o.text;
+    btn.onclick=()=>{
+      state.history.push(()=>render(text,options,back));
+      o.action();
+    };
+    game.appendChild(btn);
+  });
 }
 
-/* ---------- 시작 ---------- */
-render(`<p>눈을 뜨자 낡은 집 안이다.</p>`,[
-{text:"방을 조사한다",action:room}
-]);
+/* ================= PART 0 ================= */
+function part0(){
+render(`
+<div class="part">
+<h2>PART 0 : 새벽의 공원</h2>
+<p>
+사람이 없는 새벽, 강아지와 산책을 나왔다.<br>
+강아지가 갑자기 멈춰 섰다.<br><br>
+퍽.<br><br>
+뒤통수에 충격이 느껴지고 의식이 끊겼다.
+</p>
+</div>
+`,[{text:"눈을 뜬다",action:room}]);
+}
 
-/* ---------- 공통 잡힘 ---------- */
-function caught(){
-state.caught++;
-if(state.caught>=3){
-render(`<p>
-그는 더 이상 참지 않는다.<br>
-이번엔 확실히 죽는다.
-</p>`);
+/* ================= PART 1 ================= */
+function room(){
+render(`
+<div class="part">
+<h2>PART 1 : 방</h2>
+<p>
+신문지로 막힌 창문.<br>
+여긴 감금된 장소다.
+</p>
+</div>
+`,[
+{text:"문으로 간다",action:door},
+{text:"방을 살핀다",action:searchRoom},
+{text:"대기한다",action:wait}
+]);
+}
+
+function door(){
+if(!state.tweezers){
+render(`<p>문이 잠겨 있다. 도구가 필요하다.</p>`,[
+{text:"뒤로",action:room}
+]);
 return;
 }
-render(`<p>
-붙잡혔다.<br>
-정신을 차리고 보니 지하실이다.
-</p>`,[
-{text:"일어난다",action:basement}
+render(`<p>핀셋으로 문을 열었다.</p>`,[
+{text:"나간다",action:secondFloor}
 ]);
 }
 
-/* ---------- 방 ---------- */
-function room(){
-render(`<p>작은 방이다.</p>`,[
-{text:"문을 연다",action:hall},
-{text:"숨어본다",action:caught}
+function searchRoom(){
+render(`
+<p>
+장기 매매 문서다.<br>
+이름: 판태현<br><br>
+목적을 알았다.
+</p>
+`,[
+{text:"서랍",action:getTweezers},
+{text:"침대 밑",action:corpse}
+],true);
+}
+
+function corpse(){
+render(`<p>이미 실패한 사람의 흔적이다.</p>`,[
+{text:"뒤로",action:searchRoom}
 ]);
 }
 
-/* ---------- 복도 ---------- */
-function hall(){
-render(`<p>복도다.</p>`,[
-{text:"거실",action:livingroom},
-{text:"현관",action:frontdoor}
+function getTweezers(){
+state.tweezers=true;
+render(`<p>핀셋을 얻었다.</p>`,[
+{text:"문으로 간다",action:door}
 ]);
 }
 
-/* ---------- 거실 ---------- */
+function wait(){
+state.caught++;
+if(state.caught===1){
+render(`<p>문이 열린다… 칼이 보인다.</p>`,[
+{text:"눈을 뜬다",action:basementCaptured}
+]);
+}else{
+death();
+}
+}
+
+/* ================= PART 2 ================= */
+function secondFloor(){
+render(`
+<div class="part">
+<h2>PART 2 : 2층</h2>
+<p>집은 생각보다 넓다.</p>
+</div>
+`,[
+{text:"서재",action:library},
+{text:"계단",action:kitchen}
+]);
+}
+
+function library(){
+render(`
+<div class="part">
+<h2>서재</h2>
+<p>해부학 책들.</p>
+</div>
+`,[
+{text:"메모",action:memo},
+{text:"서랍",action:getBasementKey},
+{text:"나간다",action:caughtMove}
+],true);
+}
+
+function memo(){
+render(`
+<p><i>
+현관은 비밀번호와 열쇠.<br>
+지하실은 기회.<br>
+두 번은 없다.
+</i></p>
+`,[{text:"뒤로",action:library}]);
+}
+
+function getBasementKey(){
+state.basementKey=true;
+render(`<p>지하실 열쇠를 얻었다.</p>`,[
+{text:"뒤로",action:library}
+]);
+}
+
+function caughtMove(){
+state.caught++;
+if(state.caught===1){
+basementCaptured();
+}else{
+death();
+}
+}
+
+/* ================= CAPTURE ================= */
+function basementCaptured(){
+render(`
+<div class="part">
+<h2>지하실</h2>
+<p>이번엔 도끼다.</p>
+</div>
+`,[
+{text:"버틴다",action:secondFloor}
+]);
+}
+
+/* ================= PART 3 ================= */
+function kitchen(){
+render(`
+<div class="part">
+<h2>PART 3 : 주방</h2>
+<p>인기척.</p>
+</div>
+`,[
+{text:"도망",action:bathroom},
+{text:"숨는다",action:caughtMove}
+]);
+}
+
+function bathroom(){
+render(`<p>숨을 곳은?</p>`,[
+{text:"문 뒤",action:livingroom},
+{text:"욕조",action:caughtMove}
+]);
+}
+
+/* ================= PART 4 ================= */
 function livingroom(){
-render(`<p>
-거실이다.<br>
-서랍, TV, 지하실 문이 있다.
-</p>`,[
-{text:"서랍",action:drawer},
+render(`
+<div class="part">
+<h2>PART 4 : 거실</h2>
+<p>거실이다.</p>
+</div>
+`,[
 {text:"TV",action:tv},
+{text:"서랍",action:livingDrawer},
 {text:"지하실",action:basement}
 ]);
 }
 
-function drawer(){
-if(state.safeKey){
-render(`<p>서랍은 비어 있다.</p>`,[
-{text:"뒤로",action:livingroom}
-]);
-return;
-}
+function livingDrawer(){
 state.safeKey=true;
-render(`<p>
-서랍 안에서 <b>금고 열쇠</b>를 얻었다.
-</p>`,[
+render(`<p>서랍에서 금고 열쇠를 얻었다.</p>`,[
 {text:"뒤로",action:livingroom}
 ]);
 }
 
 function tv(){
-render(`<p>
-TV 화면에 숫자가 깜빡인다.<br>
-<b>4017</b>
-</p>`,[
+render(`<p>TV에서 숫자 3849.</p>`,[
 {text:"뒤로",action:livingroom}
 ]);
 }
 
-/* ---------- 지하실 ---------- */
+/* ================= PART 5 ================= */
 function basement(){
-render(`<p>
-축축한 지하실이다.<br>
-금고와 문이 보인다.
-</p>`,[
+if(!state.basementKey){
+render(`<p>지하실은 잠겨 있다.</p>`,[
+{text:"뒤로",action:livingroom}
+]);
+return;
+}
+render(`
+<div class="part">
+<h2>PART 5 : 지하실</h2>
+<p>금고와 판자로 막힌 출구.</p>
+</div>
+`,[
 {text:"금고",action:safe},
-{text:"복도",action:hall}
+{text:"지하실 탈출",action:basementEscape}
 ]);
 }
 
@@ -156,89 +289,32 @@ render(`<p>금고는 열리지 않는다.</p>`,[
 return;
 }
 state.frontKey=true;
-render(`<p>
-금고 안에 <b>현관 열쇠</b>가 있다.
-</p>`,[
+render(`<p>현관 열쇠를 얻었다.</p>`,[
 {text:"뒤로",action:basement}
 ]);
 }
 
-/* ---------- 현관 ---------- */
-let code="";
-function frontdoor(){
-if(!state.frontKey){
-render(`<p>현관은 잠겨 있다.</p>`,[
-{text:"뒤로",action:hall}
+function basementEscape(){
+if(state.caught>0 || !state.frontKey){
+render(`<p>조건이 맞지 않는다.</p>`,[
+{text:"뒤로",action:basement}
 ]);
 return;
 }
 render(`
-<p>번호를 입력하라</p>
-<input id="code" readonly value="">
-<div class="ui">
-${[1,2,3,4,5,6,7,8,9,0].map(n=>`<button onclick="press(${n})">${n}</button>`).join("")}
-<button onclick="enter()">확인</button>
-</div>
+<h2>지하실 탈출 엔딩</h2>
+<p>
+도끼로 판자를 부쉈다.<br>
+밖이다.
+</p>
 `);
 }
 
-function press(n){
-code+=n;
-document.getElementById("code").value=code;
+function death(){
+render(`<h2>사망</h2><p>두 번째 기회는 없다.</p>`);
 }
 
-function enter(){
-if(code==="4017"){
-escape();
-}else{
-code="";
-document.getElementById("code").value="";
-caught();
-}
-}
-
-/* ---------- 탈출 ---------- */
-function escape(){
-render(`<p>
-밖으로 나왔다.<br>
-공중전화가 보인다.
-</p>`,[
-{text:"전화한다",action:phone},
-{text:"그냥 떠난다",action:ending}
-]);
-}
-
-/* ---------- 전화 ---------- */
-let phoneNum="";
-function phone(){
-render(`
-<p>번호를 누르시오</p>
-<input id="phone" readonly value="">
-<div class="ui">
-${[1,2,3,4,5,6,7,8,9,0].map(n=>`<button onclick="phonePress(${n})">${n}</button>`).join("")}
-<button onclick="call()">통화</button>
-</div>
-`);
-}
-
-function phonePress(n){
-phoneNum+=n;
-document.getElementById("phone").value=phoneNum;
-}
-
-function call(){
-render(`<p>
-수화기 너머에서 숨소리가 들린다.<br>
-"왜 돌아봤지?"
-</p>`);
-}
-
-function ending(){
-render(`<p>
-아무 일도 없었다.<br>
-…정말로?
-</p>`);
-}
+part0();
 </script>
 </body>
 </html>
