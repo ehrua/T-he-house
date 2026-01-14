@@ -277,16 +277,51 @@ function livingroom(){
 render(`
 <div class="part">
 <h2>PART 4 : 거실</h2>
-<p>거실이다.</p>
+<p>
+거실이다.<br>
+서랍, 옷장, TV가 보인다.
+</p>
 </div>
 `,[
+{text:"서랍을 뒤진다",action:drawer},
 {text:"TV",action:tv},
 {text:"지하실",action:basement}
 ]);
 }
+,[
+ function drawer(){
+if(state.safeKey){
+render(`<p>서랍은 이미 비어 있다.</p>`,[
+{text:"뒤로",action:livingroom}
+]);
+return;
+}
 
-function tv(){
-render(`<p>TV에서 숫자 3849가 들린다.</p>`,[
+state.safeKey = true;
+render(`
+<p>
+서랍 안에서 열쇠 하나를 발견했다.<br>
+<strong>금고 열쇠</strong>라고 적혀 있다.
+</p>
+`,[
+function safe(){
+if(!state.safeKey){
+render(`<p>금고는 단단히 잠겨 있다.<br>열쇠가 필요하다.</p>`,[
+{text:"뒤로",action:basement}
+]);
+return;
+}
+state.frontKey=true;
+render(`
+<p>
+금고를 열었다.<br>
+안에는 <strong>현관 열쇠</strong>가 들어 있다.
+</p>
+`,[
+{text:"뒤로",action:basement}
+]);
+}
+
 {text:"뒤로",action:livingroom}
 ]);
 }
