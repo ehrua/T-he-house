@@ -48,7 +48,7 @@ const state={
   history:[]
 };
 
-/* ================= 공통 ================= */
+/* ===== 공통 렌더 ===== */
 function render(text,options=[],back=false){
   game.innerHTML=text;
 
@@ -64,28 +64,18 @@ function render(text,options=[],back=false){
     btn.innerText=o.text;
     btn.onclick=()=>{
       state.history.push(()=>render(text,options,back));
-      randomEncounter(o.action);
+      o.action();
     };
     game.appendChild(btn);
   });
 }
 
-/* ================= 랜덤 납치범 ================= */
-function randomEncounter(next){
-  // 지하실 제외 이동 시 30% 확률
-  if(Math.random() < 0.3){
+/* ===== 랜덤 납치범 ===== */
+function randomHunter(next){
+  if(Math.random()<0.25){
     state.caught++;
-    if(state.caught === 1){
-      render(`
-      <div class="part">
-      <h2>발각</h2>
-      <p>
-      뒤에서 숨소리가 느껴진다.<br>
-      손에는 칼이 들려 있다.<br>
-      정신을 잃는다…
-      </p>
-      </div>
-      `,[{text:"눈을 뜬다",action:basementCaptured}]);
+    if(state.caught===1){
+      basementCaptured();
     }else{
       death();
     }
@@ -100,9 +90,10 @@ render(`
 <div class="part">
 <h2>PART 0 : 새벽의 공원</h2>
 <p>
-사람 없는 새벽, 강아지와 산책 중이었다.<br>
-퍽—<br>
-기억이 끊겼다.
+사람이 없는 새벽, 강아지와 산책 중이었다.<br>
+강아지가 멈춰 섰다.<br><br>
+퍽.<br><br>
+뒤통수의 충격과 함께 시야가 끊겼다.
 </p>
 </div>
 `,[{text:"눈을 뜬다",action:room}]);
@@ -113,9 +104,14 @@ function room(){
 render(`
 <div class="part">
 <h2>PART 1 : 방</h2>
-<p>신문지로 막힌 창문. 잠긴 문.</p>
+<p>
+신문지로 막힌 창문.<br>
+잠긴 문.<br>
+여긴 탈출해야 한다.
+</p>
 </div>
 `,[
+{text:"문으로 간다",action:door},
 {text:"방을 살핀다",action:searchRoom},
 {text:"가만히 있는다",action:wait}
 ]);
@@ -124,12 +120,20 @@ render(`
 function searchRoom(){
 render(`
 <p>
-장기 매매 기록.<br>
-이유는 명확하다.
+장기 매매 기록이다.<br>
+이름: 판태현.<br>
+목적은 명확하다.
 </p>
 `,[
-{text:"서랍",action:getTweezers}
+{text:"서랍",action:getTweezers},
+{text:"침대 밑",action:corpse}
 ],true);
+}
+
+function corpse(){
+render(`<p>이미 실패한 사람의 흔적이다.</p>`,[
+{text:"뒤로",action:searchRoom}
+]);
 }
 
 function getTweezers(){
@@ -140,6 +144,12 @@ render(`<p>핀셋을 얻었다.</p>`,[
 }
 
 function door(){
+if(!state.tweezers){
+render(`<p>문이 잠겨 있다.</p>`,[
+{text:"뒤로",action:room}
+]);
+return;
+}
 render(`<p>핀셋으로 문을 열었다.</p>`,[
 {text:"밖으로",action:secondFloor}
 ]);
@@ -158,12 +168,15 @@ death();
 function secondFloor(){
 render(`
 <div class="part">
-<h2>2층</h2>
-<p>조용하다.</p>
+<h2>PART 2 : 2층</h2>
+<p>
+집 안은 고요하다.<br>
+하지만 오래 머물 수는 없다.
+</p>
 </div>
 `,[
-{text:"서재",action:library},
-{text:"계단",action:kitchen}
+{text:"서재",action:()=>randomHunter(library)},
+{text:"계단으로 내려간다",action:()=>randomHunter(kitchen)}
 ]);
 }
 
@@ -171,17 +184,22 @@ function library(){
 render(`
 <div class="part">
 <h2>서재</h2>
-<p>해부학 책이 가득하다.</p>
+<p>해부학 책과 사진.</p>
 </div>
 `,[
-{text:"메모",action:memo},
-{text:"서랍",action:getBasementKey},
-{text:"나간다",action:freeMove}
+{text:"메모를 읽는다",action:memo},
+{text:"서랍을 뒤진다",action:getBasementKey},
+{text:"나간다",action:()=>randomHunter(secondFloor)}
 ],true);
 }
 
 function memo(){
-render(`<p>탈출은 현관과 지하실.</p>`,[
+render(`<p><i>
+탈출은 두 갈래.<br>
+현관은 비밀번호와 열쇠.<br>
+지하실은 위험하지만 기회다.<br><br>
+그는 두 번은 용서하지 않는다.
+</i></p>`,[
 {text:"뒤로",action:library}
 ]);
 }
@@ -189,34 +207,22 @@ render(`<p>탈출은 현관과 지하실.</p>`,[
 function getBasementKey(){
 state.basementKey=true;
 render(`<p>지하실 열쇠를 얻었다.</p>`,[
-{text:"나간다",action:freeMove}
+{text:"뒤로",action:library}
 ]);
 }
 
-/* ================= 지하실 강제 이동 ================= */
+/* ================= 납치 ================= */
 function basementCaptured(){
 render(`
 <div class="part">
 <h2>지하실</h2>
-<p>이번엔 도끼다.</p>
+<p>
+눈을 뜨니 지하실이다.<br>
+이번엔 도끼다.
+</p>
 </div>
 `,[
-{text:"탈출을 시도한다",action:freeMove}
-]);
-}
-
-/* ================= 자유 이동 ================= */
-function freeMove(){
-render(`
-<div class="part">
-<h2>집 안</h2>
-<p>어디로 갈까?</p>
-</div>
-`,[
-{text:"2층",action:secondFloor},
-{text:"서재",action:library},
-{text:"화장실",action:bathroom},
-{text:"거실",action:livingroom}
+{text:"버틴다",action:secondFloor}
 ]);
 }
 
@@ -224,11 +230,16 @@ render(`
 function kitchen(){
 render(`
 <div class="part">
-<h2>주방</h2>
-<p>뒤에서 소리가 난다.</p>
+<h2>PART 3 : 주방</h2>
+<p>
+냉장고의 모터 소리.<br>
+뒤에서 발소리가 난다.
+</p>
 </div>
 `,[
-{text:"화장실로 도망",action:bathroom}
+{text:"싱크대 아래",action:()=>randomHunter(secondFloor)},
+{text:"식탁 뒤",action:()=>randomHunter(livingroom)},
+{text:"화장실",action:()=>randomHunter(bathroom)}
 ]);
 }
 
@@ -237,11 +248,12 @@ function bathroom(){
 render(`
 <div class="part">
 <h2>화장실</h2>
-<p>숨을 곳을 고른다.</p>
+<p>
+숨을 곳이 없다.
+</p>
 </div>
 `,[
-{text:"문 뒤",action:livingroom},
-{text:"욕조",action:freeMove}
+{text:"나간다",action:()=>randomHunter(livingroom)}
 ]);
 }
 
@@ -249,25 +261,27 @@ render(`
 function livingroom(){
 render(`
 <div class="part">
-<h2>거실</h2>
-<p>중앙 공간이다.</p>
+<h2>PART 4 : 거실</h2>
+<p>
+여긴 갈림길이다.
+</p>
 </div>
 `,[
 {text:"TV",action:tv},
-{text:"서랍",action:getSafeKey},
+{text:"서랍",action:livingDrawer},
 {text:"지하실",action:basement}
 ]);
 }
 
 function tv(){
-render(`<p>TV에서 3849가 반복된다.</p>`,[
+render(`<p>TV에서 숫자 3849가 반복된다.</p>`,[
 {text:"뒤로",action:livingroom}
 ]);
 }
 
-function getSafeKey(){
+function livingDrawer(){
 state.safeKey=true;
-render(`<p>금고 열쇠를 얻었다.</p>`,[
+render(`<p>서랍에서 금고 열쇠를 얻었다.</p>`,[
 {text:"뒤로",action:livingroom}
 ]);
 }
@@ -282,19 +296,32 @@ return;
 }
 render(`
 <div class="part">
-<h2>지하실</h2>
-<p>금고와 판자가 있다.</p>
+<h2>PART 5 : 지하실</h2>
+<p>
+금고와 판자로 막힌 출구.
+</p>
 </div>
 `,[
 {text:"금고",action:safe},
 {text:"판자를 조사한다",action:basementEscape},
-{text:"나간다",action:freeMove}
+{text:"나간다",action:basementFreeMove}
 ]);
+}
+
+function basementFreeMove(){
+render(`
+<p>어디로 갈 것인가?</p>
+`,[
+{text:"2층",action:()=>randomHunter(secondFloor)},
+{text:"화장실",action:()=>randomHunter(bathroom)},
+{text:"서재",action:()=>randomHunter(library)},
+{text:"거실",action:()=>randomHunter(livingroom)}
+],true);
 }
 
 function safe(){
 if(!state.safeKey){
-render(`<p>금고는 잠겨 있다.</p>`,[
+render(`<p>금고는 열리지 않는다.</p>`,[
 {text:"뒤로",action:basement}
 ]);
 return;
@@ -313,16 +340,15 @@ render(`<p>조건이 맞지 않는다.</p>`,[
 return;
 }
 render(`
-<h2>탈출</h2>
+<h2>지하실 탈출 엔딩</h2>
 <p>
-도끼로 판자를 부쉈다.<br>
-차가운 공기.<br>
+판자를 부쉈다.<br>
+차가운 공기가 들어온다.<br>
 살아남았다.
 </p>
 `);
 }
 
-/* ================= 사망 ================= */
 function death(){
 render(`<h2>사망</h2><p>두 번째 실수는 끝이다.</p>`);
 }
