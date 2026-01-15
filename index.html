@@ -169,10 +169,7 @@ function secondFloor(){
 render(`
 <div class="part">
 <h2>PART 2 : 2층</h2>
-<p>
-집 안은 고요하다.<br>
-하지만 오래 머물 수는 없다.
-</p>
+<p>집 안은 고요하다.</p>
 </div>
 `,[
 {text:"서재",action:()=>randomHunter(library)},
@@ -196,9 +193,8 @@ render(`
 function memo(){
 render(`<p><i>
 탈출은 두 갈래.<br>
-현관은 비밀번호와 열쇠.<br>
-지하실은 위험하지만 기회다.<br><br>
-그는 두 번은 용서하지 않는다.
+현관과 지하실.<br>
+그는 두 번은 허락하지 않는다.
 </i></p>`,[
 {text:"뒤로",action:library}
 ]);
@@ -217,8 +213,8 @@ render(`
 <div class="part">
 <h2>지하실</h2>
 <p>
-눈을 뜨니 지하실이다.<br>
-이번엔 도끼다.
+정신을 차리니 지하실이다.<br>
+도끼가 벽에 걸려 있다.
 </p>
 </div>
 `,[
@@ -232,28 +228,29 @@ render(`
 <div class="part">
 <h2>PART 3 : 주방</h2>
 <p>
-냉장고의 모터 소리.<br>
 뒤에서 발소리가 난다.
 </p>
 </div>
 `,[
-{text:"싱크대 아래",action:()=>randomHunter(secondFloor)},
-{text:"식탁 뒤",action:()=>randomHunter(livingroom)},
-{text:"화장실",action:()=>randomHunter(bathroom)}
+{text:"화장실로 도망친다",action:()=>randomHunter(bathroom)},
+{text:"식탁 뒤로 몸을 숨긴다",action:()=>randomHunter(livingroom)}
 ]);
 }
 
-/* ================= 화장실 ================= */
+/* ================= 화장실 (수정 핵심) ================= */
 function bathroom(){
 render(`
 <div class="part">
 <h2>화장실</h2>
 <p>
-숨을 곳이 없다.
+급히 문을 닫았다.<br>
+숨을 곳을 골라야 한다.
 </p>
 </div>
 `,[
-{text:"나간다",action:()=>randomHunter(livingroom)}
+{text:"문 뒤",action:()=>randomHunter(livingroom)},
+{text:"변기 뒤",action:()=>randomHunter(livingroom)},
+{text:"욕조 안",action:()=>randomHunter(livingroom)}
 ]);
 }
 
@@ -262,9 +259,7 @@ function livingroom(){
 render(`
 <div class="part">
 <h2>PART 4 : 거실</h2>
-<p>
-여긴 갈림길이다.
-</p>
+<p>여긴 갈림길이다.</p>
 </div>
 `,[
 {text:"TV",action:tv},
@@ -281,7 +276,7 @@ render(`<p>TV에서 숫자 3849가 반복된다.</p>`,[
 
 function livingDrawer(){
 state.safeKey=true;
-render(`<p>서랍에서 금고 열쇠를 얻었다.</p>`,[
+render(`<p>금고 열쇠를 얻었다.</p>`,[
 {text:"뒤로",action:livingroom}
 ]);
 }
@@ -309,9 +304,7 @@ render(`
 }
 
 function basementFreeMove(){
-render(`
-<p>어디로 갈 것인가?</p>
-`,[
+render(`<p>어디로 갈 것인가?</p>`,[
 {text:"2층",action:()=>randomHunter(secondFloor)},
 {text:"화장실",action:()=>randomHunter(bathroom)},
 {text:"서재",action:()=>randomHunter(library)},
@@ -334,7 +327,7 @@ render(`<p>현관 열쇠를 얻었다.</p>`,[
 
 function basementEscape(){
 if(state.caught>0 || !state.frontKey){
-render(`<p>조건이 맞지 않는다.</p>`,[
+render(`<p>아직 조건이 맞지 않는다.</p>`,[
 {text:"뒤로",action:basement}
 ]);
 return;
@@ -343,7 +336,7 @@ render(`
 <h2>지하실 탈출 엔딩</h2>
 <p>
 판자를 부쉈다.<br>
-차가운 공기가 들어온다.<br>
+차가운 공기가 밀려온다.<br>
 살아남았다.
 </p>
 `);
