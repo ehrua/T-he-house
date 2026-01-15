@@ -158,9 +158,9 @@ render(`<p>핀셋으로 문을 열었다.</p>`,[
 function wait(){
 state.caught++;
 if(state.caught===1){
-basementCaptured();
+  basementCaptured();
 }else{
-death();
+  death();
 }
 }
 
@@ -173,7 +173,7 @@ render(`
 </div>
 `,[
 {text:"서재",action:()=>randomHunter(library)},
-{text:"계단으로 내려간다",action:()=>randomHunter(kitchen)}
+{text:"계단으로 내려간다",action:kitchen} <!-- ★ 수정: random 제거 -->
 ]);
 }
 
@@ -237,7 +237,7 @@ render(`
 ]);
 }
 
-/* ================= 화장실 (수정 핵심) ================= */
+/* ================= 화장실 ================= */
 function bathroom(){
 render(`
 <div class="part">
