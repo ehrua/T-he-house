@@ -37,17 +37,13 @@ button:hover{background:#222;}
 }
 .display{
   background:#111;
-  padding:12px;
+  padding:10px;
   margin-bottom:10px;
   text-align:center;
-  letter-spacing:6px;
-  font-size:18px;
-}
-.alarm{
-  color:#f33;
-  font-weight:bold;
+  letter-spacing:4px;
 }
 h2{margin-top:0;}
+.alarm{color:#f33;}
 </style>
 </head>
 <body>
@@ -59,7 +55,6 @@ const game=document.getElementById("game");
 const state={
   tweezers:false,
   basementKey:false,
-  safeKey:false,
   frontKey:false,
   caught:0,
   deathReason:"",
@@ -87,18 +82,14 @@ function render(text,options=[],back=false){
   });
 }
 
-/* ===== 랜덤 납치범 ===== */
-function randomHunter(next){
-  if(Math.random()<0.25){
-    state.caught++;
-    state.deathReason="발소리를 숨기지 못했다. 바로 뒤에서 숨소리가 들렸다.";
-    if(state.caught===1){
-      basementCaptured();
-    }else{
-      death();
-    }
+/* ===== 납치범 로직 ===== */
+function hunter(next){
+  state.caught++;
+  if(state.caught===1){
+    basementCaptured("몽둥이에 맞아 정신을 잃었다.");
   }else{
-    next();
+    state.deathReason="도끼가 내려찍혔다. 이번엔 끝이다.";
+    death();
   }
 }
 
@@ -107,7 +98,7 @@ function part0(){
 render(`
 <div class="part">
 <h2>PART 0 : 새벽의 공원</h2>
-<p>퍽.<br>뒤통수의 충격.</p>
+<p>강아지와 산책 중이었다.<br>퍽.</p>
 </div>
 `,[{text:"눈을 뜬다",action:room}]);
 }
@@ -117,137 +108,114 @@ function room(){
 render(`
 <div class="part">
 <h2>방</h2>
-<p>신문지로 막힌 창문. 잠긴 문.</p>
+<p>신문지로 막힌 창문, 잠긴 문.</p>
 </div>
 `,[
 {text:"문",action:door},
 {text:"방 조사",action:searchRoom},
-{text:"가만히",action:wait}
+{text:"가만히",action:()=>hunter()}
 ]);
 }
 
 function searchRoom(){
-render(`<p>장기 매매 기록… 이름: 판태현</p>`,[
-{text:"서랍",action:getTweezers},
-{text:"침대 밑",action:()=>{
-  state.deathReason="시체를 건드리는 순간 바닥이 삐걱였다.";
-  randomHunter(room);
-}}
+render(`<p>장기 매매 기록. 이름: 판태현.</p>`,[
+{text:"서랍",action:()=>{state.tweezers=true; render("<p>핀셋을 얻었다.</p>",[{text:"뒤로",action:room}]);}},
+{text:"침대 밑",action:()=>hunter()}
 ],true);
-}
-
-function getTweezers(){
-state.tweezers=true;
-render(`<p>핀셋을 얻었다.</p>`,[{text:"문",action:door}]);
 }
 
 function door(){
 if(!state.tweezers){
-render(`<p>문이 잠겨 있다.</p>`,[{text:"뒤로",action:room}]);
+render("<p>문이 잠겨 있다.</p>",[{text:"뒤로",action:room}]);
 return;
 }
-render(`<p>문이 열린다.</p>`,[{text:"밖으로",action:secondFloor}]);
-}
-
-function wait(){
-state.caught++;
-state.deathReason="시간이 해결해줄 거라 믿은 게 실수였다.";
-if(state.caught===1) basementCaptured();
-else death();
+render("<p>문이 열린다.</p>",[{text:"밖으로",action:secondFloor}]);
 }
 
 /* ================= 2층 ================= */
 function secondFloor(){
-render(`<div class="part"><h2>2층</h2></div>`,[
-{text:"서재",action:()=>randomHunter(library)},
+render("<div class='part'><h2>2층</h2></div>",[
+{text:"서재",action:library},
 {text:"계단",action:kitchen}
 ]);
 }
 
 function library(){
-render(`<div class="part"><h2>서재</h2><p>사진과 해부학 책.</p></div>`,[
-{text:"메모",action:memo},
-{text:"서랍",action:getBasementKey},
-{text:"나간다",action:()=>randomHunter(secondFloor)}
+render(`
+<div class="part">
+<h2>서재</h2>
+<p>해부학 책과 사진들.</p>
+</div>
+`,[
+{text:"메모",action:()=>render("<p>탈출은 두 갈래다.</p>",[{text:"뒤로",action:library}])},
+{text:"서랍",action:()=>{state.basementKey=true; render("<p>지하실 열쇠 획득.</p>",[{text:"뒤로",action:library}]);}},
+{text:"나간다",action:secondFloor}
 ],true);
-}
-
-function memo(){
-render(`<p><i>TV의 숫자를 기억해라. 3849</i></p>`,[{text:"뒤로",action:library}]);
-}
-
-function getBasementKey(){
-state.basementKey=true;
-render(`<p>지하실 열쇠 획득.</p>`,[{text:"뒤로",action:library}]);
-}
-
-/* ================= 납치 ================= */
-function basementCaptured(){
-render(`<div class="part"><h2>지하실</h2><p>붙잡혀 끌려왔다.</p></div>`,[
-{text:"버틴다",action:secondFloor}
-]);
 }
 
 /* ================= 주방 / 화장실 ================= */
 function kitchen(){
-render(`<div class="part"><h2>주방</h2><p>뒤에서 발소리.</p></div>`,[
-{text:"화장실",action:()=>randomHunter(bathroom)},
-{text:"거실",action:()=>randomHunter(livingroom)}
+render("<div class='part'><h2>주방</h2><p>발소리가 가까워진다.</p></div>",[
+{text:"화장실",action:bathroom},
+{text:"거실",action:livingroom}
 ]);
 }
 
 function bathroom(){
-render(`<div class="part"><h2>화장실</h2></div>`,[
-{text:"문 뒤",action:()=>randomHunter(livingroom)},
-{text:"변기 뒤",action:()=>randomHunter(livingroom)},
-{text:"욕조",action:()=>randomHunter(livingroom)}
+render("<div class='part'><h2>화장실</h2></div>",[
+{text:"숨는다",action:()=>hunter()}
 ]);
 }
 
 /* ================= 거실 ================= */
 function livingroom(){
-render(`<div class="part"><h2>거실</h2></div>`,[
-{text:"TV",action:tv},
-{text:"서랍",action:livingDrawer},
-{text:"지하실",action:basement}
+render("<div class='part'><h2>거실</h2></div>",[
+{text:"TV",action:()=>render("<p>TV에 숫자 3849가 반복된다.</p>",[{text:"뒤로",action:livingroom}])},
+{text:"지하실",action:basement},
+{text:"현관",action:frontDoor}
 ]);
-}
-
-function tv(){
-render(`<p>TV에 3849가 반복된다.</p>`,[{text:"뒤로",action:livingroom}]);
-}
-
-function livingDrawer(){
-state.safeKey=true;
-render(`<p>금고 열쇠 획득.</p>`,[{text:"뒤로",action:livingroom}]);
 }
 
 /* ================= 지하실 ================= */
 function basement(){
 if(!state.basementKey){
-render(`<p>잠겨 있다.</p>`,[{text:"뒤로",action:livingroom}]);
+render("<p>지하실 문은 잠겨 있다.</p>",[{text:"뒤로",action:livingroom}]);
 return;
 }
-render(`<div class="part"><h2>지하실</h2></div>`,[
-{text:"나간다",action:basementFreeMove}
+render(`
+<div class="part">
+<h2>지하실</h2>
+<p>판자로 막힌 출구가 보인다.</p>
+</div>
+`,[
+{text:"판자를 부순다",action:basementEscape},
+{text:"돌아간다",action:livingroom}
 ]);
 }
 
-function basementFreeMove(){
-render(`<p>이동</p>`,[
-{text:"2층",action:()=>randomHunter(secondFloor)},
-{text:"주방",action:()=>randomHunter(kitchen)},
-{text:"거실",action:()=>randomHunter(livingroom)},
-{text:"현관",action:frontDoor}
-],true);
+function basementCaptured(reason){
+render(`
+<div class="part">
+<h2>지하실</h2>
+<p>${reason}<br>쇠사슬 소리가 난다.</p>
+</div>
+`,[
+{text:"버틴다",action:secondFloor}
+]);
 }
 
-/* ================= 현관 도어락 ================= */
+function basementEscape(){
+render(`
+<h2>지하실 탈출 엔딩</h2>
+<p>판자를 부수고 밖으로 기어 나왔다.<br>살아남았다.</p>
+`);
+}
+
+/* ================= 현관 ================= */
 function frontDoor(){
 state.input="";
 render(`
 <h2>현관 도어락</h2>
-<p>전자음이 미세하게 울린다.</p>
 <div class="display">${state.input}</div>
 <div class="keypad" id="pad"></div>
 `,[],true);
@@ -259,12 +227,12 @@ addKey("확인",checkDoor);
 addKey("←",()=>{state.input=state.input.slice(0,-1);frontDoor();});
 }
 
-function addKey(val){
+function addKey(v){
 const b=document.createElement("button");
-b.innerText=val;
+b.innerText=v;
 b.onclick=()=>{
-  if(typeof val==="number"){
-    state.input+=val;
+  if(typeof v==="number"){
+    state.input+=v;
     frontDoor();
   }
 };
@@ -273,26 +241,15 @@ document.getElementById("pad").appendChild(b);
 
 function checkDoor(){
 if(state.input==="3849"){
-render(`<h2>생존 엔딩</h2><p>문이 열리고 새벽 공기가 밀려온다.</p>`);
+render("<h2>현관 탈출 엔딩</h2><p>문이 열렸다. 새벽 공기.</p>");
 }else{
-alarmEvent();
-}
-}
-
-/* ===== 경보 & 추격 ===== */
-function alarmEvent(){
 render(`
-<h2 class="alarm">경보음</h2>
-<p>
-삐— 삐— 삐—<br>
-집 안 어딘가에서 급히 뛰는 발소리.<br>
-그가 온다.
-</p>
+<h2 class="alarm">경보</h2>
+<p>삐— 삐—<br>그가 달려온다.</p>
 `,[
-{text:"주방으로 도망친다",action:()=>randomHunter(kitchen)},
-{text:"화장실로 숨는다",action:()=>randomHunter(bathroom)},
-{text:"거실로 달린다",action:()=>randomHunter(livingroom)}
+{text:"도망친다",action:()=>hunter()}
 ]);
+}
 }
 
 /* ================= 사망 ================= */
