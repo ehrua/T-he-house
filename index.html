@@ -37,10 +37,15 @@ button:hover{background:#222;}
 }
 .display{
   background:#111;
-  padding:10px;
+  padding:12px;
   margin-bottom:10px;
   text-align:center;
-  letter-spacing:4px;
+  letter-spacing:6px;
+  font-size:18px;
+}
+.alarm{
+  color:#f33;
+  font-weight:bold;
 }
 h2{margin-top:0;}
 </style>
@@ -86,7 +91,7 @@ function render(text,options=[],back=false){
 function randomHunter(next){
   if(Math.random()<0.25){
     state.caught++;
-    state.deathReason="소리를 너무 크게 냈다. 발소리가 바로 뒤에서 멈췄다.";
+    state.deathReason="발소리를 숨기지 못했다. 바로 뒤에서 숨소리가 들렸다.";
     if(state.caught===1){
       basementCaptured();
     }else{
@@ -97,7 +102,7 @@ function randomHunter(next){
   }
 }
 
-/* ================= PART 0 ================= */
+/* ================= 시작 ================= */
 function part0(){
 render(`
 <div class="part">
@@ -107,7 +112,7 @@ render(`
 `,[{text:"눈을 뜬다",action:room}]);
 }
 
-/* ================= PART 1 ================= */
+/* ================= 방 ================= */
 function room(){
 render(`
 <div class="part">
@@ -124,7 +129,10 @@ render(`
 function searchRoom(){
 render(`<p>장기 매매 기록… 이름: 판태현</p>`,[
 {text:"서랍",action:getTweezers},
-{text:"침대 밑",action:()=>{state.deathReason="시체를 건드리는 순간 인기척이 났다.";randomHunter(room);}}
+{text:"침대 밑",action:()=>{
+  state.deathReason="시체를 건드리는 순간 바닥이 삐걱였다.";
+  randomHunter(room);
+}}
 ],true);
 }
 
@@ -143,7 +151,7 @@ render(`<p>문이 열린다.</p>`,[{text:"밖으로",action:secondFloor}]);
 
 function wait(){
 state.caught++;
-state.deathReason="움직이지 않으면 들키지 않을 거라 착각했다.";
+state.deathReason="시간이 해결해줄 거라 믿은 게 실수였다.";
 if(state.caught===1) basementCaptured();
 else death();
 }
@@ -221,7 +229,6 @@ render(`<p>잠겨 있다.</p>`,[{text:"뒤로",action:livingroom}]);
 return;
 }
 render(`<div class="part"><h2>지하실</h2></div>`,[
-{text:"금고",action:safe},
 {text:"나간다",action:basementFreeMove}
 ]);
 }
@@ -235,12 +242,12 @@ render(`<p>이동</p>`,[
 ],true);
 }
 
-/* ================= 현관 키패드 ================= */
+/* ================= 현관 도어락 ================= */
 function frontDoor(){
-if(!state.frontKey){
 state.input="";
 render(`
-<h2>현관 키패드</h2>
+<h2>현관 도어락</h2>
+<p>전자음이 미세하게 울린다.</p>
 <div class="display">${state.input}</div>
 <div class="keypad" id="pad"></div>
 `,[],true);
@@ -250,58 +257,42 @@ for(let i=1;i<=9;i++) addKey(i);
 addKey(0);
 addKey("확인",checkDoor);
 addKey("←",()=>{state.input=state.input.slice(0,-1);frontDoor();});
-return;
-}
-phoneBooth();
 }
 
-function addKey(val,fn){
+function addKey(val){
 const b=document.createElement("button");
 b.innerText=val;
-b.onclick=fn||(()=>{state.input+=val;frontDoor();});
+b.onclick=()=>{
+  if(typeof val==="number"){
+    state.input+=val;
+    frontDoor();
+  }
+};
 document.getElementById("pad").appendChild(b);
 }
 
 function checkDoor(){
 if(state.input==="3849"){
-state.frontKey=true;
-phoneBooth();
+render(`<h2>생존 엔딩</h2><p>문이 열리고 새벽 공기가 밀려온다.</p>`);
 }else{
-state.deathReason="비밀번호를 틀리며 경보가 울렸다.";
-death();
+alarmEvent();
 }
 }
 
-/* ================= 공중전화 ================= */
-function phoneBooth(){
-state.input="";
+/* ===== 경보 & 추격 ===== */
+function alarmEvent(){
 render(`
-<h2>공중전화</h2>
-<div class="display">${state.input}</div>
-<div class="keypad" id="phone"></div>
-`,[]);
-
-const p=document.getElementById("phone");
-for(let i=1;i<=9;i++) addPhone(i);
-addPhone(0);
-addPhone("통화",callPolice);
-addPhone("←",()=>{state.input=state.input.slice(0,-1);phoneBooth();});
-}
-
-function addPhone(v){
-const b=document.createElement("button");
-b.innerText=v;
-b.onclick=()=>{state.input+=v;phoneBooth();};
-document.getElementById("phone").appendChild(b);
-}
-
-function callPolice(){
-if(state.input==="112"){
-render(`<h2>생존 엔딩</h2><p>사이렌 소리가 들린다.</p>`);
-}else{
-state.deathReason="잘못된 번호. 위치가 추적됐다.";
-death();
-}
+<h2 class="alarm">경보음</h2>
+<p>
+삐— 삐— 삐—<br>
+집 안 어딘가에서 급히 뛰는 발소리.<br>
+그가 온다.
+</p>
+`,[
+{text:"주방으로 도망친다",action:()=>randomHunter(kitchen)},
+{text:"화장실로 숨는다",action:()=>randomHunter(bathroom)},
+{text:"거실로 달린다",action:()=>randomHunter(livingroom)}
+]);
 }
 
 /* ================= 사망 ================= */
