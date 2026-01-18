@@ -26,8 +26,6 @@ button:hover{background:#222;}
   letter-spacing:6px;
   font-size:20px;
 }
-.alarm{color:#f33;font-weight:bold;}
-h2{margin-top:0;}
 .memo{color:#aaa;font-style:italic;}
 </style>
 </head>
@@ -37,6 +35,22 @@ h2{margin-top:0;}
 
 <script>
 const game=document.getElementById("game");
+
+/* ===== 사운드 ===== */
+const audio={
+  bgm:new Audio("sound/TheDread.mp3"),
+  chase:new Audio("sound/Anxiety.mp3"),
+  phone:new Audio("sound/phone.mp3")
+};
+audio.bgm.loop=true;
+audio.chase.loop=true;
+audio.bgm.volume=0.7;
+audio.chase.volume=0.55;
+audio.phone.volume=0.8;
+
+let bgmStarted=false;
+
+/* ===== 상태 ===== */
 const state={
   tweezers:false,
   basementKey:false,
@@ -52,6 +66,13 @@ const state={
 /* ===== 공통 렌더 ===== */
 function render(text,options=[],back=false){
   clearTimeout(state.hunterTimer);
+
+  // 추격 종료 시 BGM 복귀
+  audio.chase.pause();
+  if(bgmStarted && audio.bgm.paused){
+    audio.bgm.play();
+  }
+
   game.innerHTML=text;
 
   if(Math.random()<0.35){
@@ -67,6 +88,7 @@ function render(text,options=[],back=false){
     b.onclick=()=>state.history.pop()();
     game.appendChild(b);
   }
+
   options.forEach(o=>{
     const btn=document.createElement("button");
     btn.innerText=o.text;
@@ -81,6 +103,10 @@ function render(text,options=[],back=false){
 /* ===== 랜덤 납치범 ===== */
 function randomHunter(next){
   if(Math.random()<0.25){
+    audio.bgm.pause();
+    audio.chase.currentTime=0;
+    audio.chase.play();
+
     state.caught++;
     state.deathReason="숨을 고르는 순간, 기척이 바로 등 뒤에 있었다.";
     if(state.caught===1) basementCaptured();
@@ -95,7 +121,16 @@ render(`
 <h2>PART 0 : 새벽의 공원</h2>
 <p>퍽.<br>뒤통수의 충격.</p>
 </div>
-`,[{text:"눈을 뜬다",action:room}]);
+`,[{
+  text:"눈을 뜬다",
+  action:()=>{
+    if(!bgmStarted){
+      audio.bgm.play();
+      bgmStarted=true;
+    }
+    room();
+  }
+}]);
 }
 
 /* ================= 방 ================= */
@@ -227,12 +262,9 @@ render(`<p>금고는 잠겨 있다.</p>`,[{text:"뒤로",action:basement}]);
 return;
 }
 state.frontKey=true;
-render(`
-<p>
-금고 안에 작은 열쇠.<br>
-<i>현관 열쇠다.</i>
-</p>
-`,[{text:"뒤로",action:basement}]);
+render(`<p>금고 안에 작은 열쇠.<br><i>현관 열쇠다.</i></p>`,[
+{text:"뒤로",action:basement}
+]);
 }
 
 function basementFreeMove(){
@@ -244,9 +276,9 @@ render(`<p>이동</p>`,[
 ],true);
 }
 
-/* ================= 현관 도어락 ================= */
+/* ================= 현관 ================= */
 function frontDoor(){
-state.input="";   // ★ 입력값 명확히 초기화
+state.input="";
 drawFrontDoor();
 }
 
@@ -292,10 +324,7 @@ function outside(){
 render(`
 <div class="part">
 <h2>밖</h2>
-<p>
-차가운 공기.<br>
-골목 끝에 공중전화가 있다.
-</p>
+<p>차가운 공기.<br>골목 끝에 공중전화가 있다.</p>
 <p class="memo">전화기 아래 낡은 메모: 3849</p>
 </div>
 `,[{text:"공중전화",action:payphone}]);
@@ -303,7 +332,7 @@ render(`
 
 /* ================= 공중전화 ================= */
 function payphone(){
-state.input="";   // ★ 공중전화 입력 초기화
+state.input="";
 drawPayphone();
 }
 
@@ -331,25 +360,14 @@ pad.appendChild(ok);
 }
 
 function callPhone(){
+audio.phone.currentTime=0;
+audio.phone.play();
+
 if(state.input==="112"){
-render(`
-<h2>히든 엔딩 : 사이렌</h2>
-<p>
-사이렌 소리가 멀어졌다.<br>
-문이 닫히는 소리.<br>
-전화를 끊은 쪽에서 웃음이 들렸다.
-</p>
-`);
+render(`<h2>히든 엔딩 : 사이렌</h2><p>웃음이 들렸다.</p>`);
 }
 else if(state.input==="3849"){
-render(`
-<h2>히든 엔딩 : 거래</h2>
-<p>
-"확인되었습니다."<br>
-당신의 이름이 먼저 불렸다.<br>
-전화는 끊어졌다.
-</p>
-`);
+render(`<h2>히든 엔딩 : 거래</h2><p>당신의 이름이 먼저 불렸다.</p>`);
 }
 else{
 state.deathReason="신호음이 끊기고 뒤에서 숨소리가 겹쳤다.";
@@ -360,6 +378,8 @@ death();
 /* ================= 사망 ================= */
 function death(){
 clearTimeout(state.hunterTimer);
+audio.bgm.pause();
+audio.chase.pause();
 render(`<h2>사망</h2><p>${state.deathReason}</p>`);
 }
 
