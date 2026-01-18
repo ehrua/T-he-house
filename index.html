@@ -28,6 +28,7 @@ button:hover{background:#222;}
 }
 .alarm{color:#f33;font-weight:bold;}
 h2{margin-top:0;}
+.memo{color:#aaa;font-style:italic;}
 </style>
 </head>
 
@@ -53,7 +54,6 @@ function render(text,options=[],back=false){
   clearTimeout(state.hunterTimer);
   game.innerHTML=text;
 
-  // 🔴 납치범 타이머 (12~22초)
   if(Math.random()<0.35){
     state.hunterTimer=setTimeout(()=>{
       state.deathReason="너무 오래 머물렀다. 발소리가 바로 뒤에서 멈췄다.";
@@ -159,7 +159,7 @@ render(`<div class="part"><h2>서재</h2><p>사진과 해부학 책.</p></div>`,
 }
 
 function memo(){
-render(`<p><i>TV의 숫자를 기억해라. 그는 기회를 준다 </i></p>`,[{text:"뒤로",action:library}]);
+render(`<p class="memo">TV의 숫자를 기억해라. 3849</p>`,[{text:"뒤로",action:library}]);
 }
 
 function getBasementKey(){
@@ -176,7 +176,7 @@ render(`<div class="part"><h2>지하실</h2><p>붙잡혀 끌려왔다.</p></div>
 
 /* ================= 주방 / 화장실 ================= */
 function kitchen(){
-render(`<div class="part"><h2>주방</h2><p>어딘가에서 기척이 사라졌다.</p></div>`,[
+render(`<div class="part"><h2>주방</h2><p>집이 숨을 죽인 것 같다.</p></div>`,[
 {text:"화장실",action:()=>randomHunter(bathroom)},
 {text:"거실",action:()=>randomHunter(livingroom)}
 ]);
@@ -229,7 +229,7 @@ return;
 state.frontKey=true;
 render(`
 <p>
-금고 안에서 작은 열쇠 하나를 발견했다.<br>
+금고 안에 작은 열쇠.<br>
 <i>현관 열쇠다.</i>
 </p>
 `,[{text:"뒤로",action:basement}]);
@@ -244,51 +244,100 @@ render(`<p>이동</p>`,[
 ],true);
 }
 
-/* ================= 현관 키패드 ================= */
+/* ================= 현관 도어락 ================= */
 function frontDoor(){
 render(`
 <h2>현관 도어락</h2>
-<p>입력된 숫자</p>
 <div class="display">${state.input}</div>
 <div class="keypad" id="pad"></div>
 `,[],true);
 
 const pad=document.getElementById("pad");
-
 [1,2,3,4,5,6,7,8,9,0].forEach(n=>{
   const b=document.createElement("button");
   b.innerText=n;
-  b.onclick=()=>{
-    state.input+=n;
-    frontDoor();
-  };
+  b.onclick=()=>{state.input+=n;frontDoor();};
   pad.appendChild(b);
 });
-
 const ok=document.createElement("button");
 ok.innerText="확인";
 ok.onclick=checkDoor;
 pad.appendChild(ok);
-
-const del=document.createElement("button");
-del.innerText="←";
-del.onclick=()=>{
-  state.input=state.input.slice(0,-1);
-  frontDoor();
-};
-pad.appendChild(del);
 }
 
 function checkDoor(){
 if(!state.frontKey){
-state.deathReason="도어락은 반응이 없다. 열쇠가 필요하다.";
+state.deathReason="도어락은 반응이 없다.";
 death();
 return;
 }
 if(state.input==="3849"){
-render(`<h2>생존 엔딩</h2><p>문이 열리고 새벽 공기가 밀려온다.</p>`);
+outside();
 }else{
-state.deathReason="경보음이 울렸고, 발소리가 빠르게 다가왔다.";
+state.deathReason="경보음과 함께 발소리가 터져 나왔다.";
+death();
+}
+}
+
+/* ================= 바깥 ================= */
+function outside(){
+render(`
+<div class="part">
+<h2>밖</h2>
+<p>
+차가운 공기.<br>
+골목 끝에 공중전화가 있다.
+</p>
+<p class="memo">전화기 아래 낡은 메모: 3849</p>
+</div>
+`,[{text:"공중전화",action:payphone}]);
+}
+
+/* ================= 공중전화 ================= */
+function payphone(){
+state.input="";
+render(`
+<h2>공중전화</h2>
+<div class="display">${state.input}</div>
+<div class="keypad" id="pad"></div>
+`,[],true);
+
+const pad=document.getElementById("pad");
+[1,2,3,4,5,6,7,8,9,0].forEach(n=>{
+  const b=document.createElement("button");
+  b.innerText=n;
+  b.onclick=()=>{state.input+=n;payphone();};
+  pad.appendChild(b);
+});
+const ok=document.createElement("button");
+ok.innerText="통화";
+ok.onclick=callPhone;
+pad.appendChild(ok);
+}
+
+function callPhone(){
+if(state.input==="112"){
+render(`
+<h2>히든 엔딩 : 사이렌</h2>
+<p>
+사이렌 소리가 멀어졌다.<br>
+문이 닫히는 소리.<br>
+전화를 끊은 쪽에서 웃음이 들렸다.
+</p>
+`);
+}
+else if(state.input==="3849"){
+render(`
+<h2>히든 엔딩 : 거래</h2>
+<p>
+"확인되었습니다."<br>
+당신의 이름이 먼저 불렸다.<br>
+전화는 끊어졌다.
+</p>
+`);
+}
+else{
+state.deathReason="신호음이 끊기고 뒤에서 숨소리가 겹쳤다.";
 death();
 }
 }
