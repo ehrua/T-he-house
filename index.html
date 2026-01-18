@@ -27,6 +27,7 @@ button:hover{background:#222;}
   font-size:20px;
 }
 .memo{color:#aaa;font-style:italic;}
+h2{margin-top:0;}
 </style>
 </head>
 
@@ -37,72 +38,345 @@ button:hover{background:#222;}
 /* ================== 사운드 ================== */
 const bgm = new Audio("./sound/TheDread.mp3");
 const chaseBgm = new Audio("./sound/Anxiety.mp3");
-const dialTone = new Audio("./sound/phone.mp3");   // 번호 누를 때
-const connectTone = new Audio("./sound/phone.mp3"); // 통화 연결음 (같은 파일 재사용)
+const phoneKeySfx = new Audio("./sound/phone.mp3");   // 번호 누를 때
+const phoneConnectSfx = new Audio("./sound/connect.mp3"); // 🔔 통화 연결음
 
 bgm.loop = true;
 chaseBgm.loop = true;
-connectTone.loop = true;
 
 bgm.volume = 0.7;
 chaseBgm.volume = 0.6;
-dialTone.volume = 0.8;
-connectTone.volume = 0.5;
+phoneKeySfx.volume = 0.9;
+phoneConnectSfx.volume = 0.9;
 
-let audioUnlocked = false;
-
+let audioUnlocked=false;
 function unlockAudio(){
   if(audioUnlocked) return;
   bgm.play().catch(()=>{});
-  audioUnlocked = true;
+  audioUnlocked=true;
+}
+
+function playChase(){
+  bgm.pause();
+  chaseBgm.currentTime=0;
+  chaseBgm.play().catch(()=>{});
+}
+function stopChase(){
+  chaseBgm.pause();
+  bgm.play().catch(()=>{});
 }
 
 /* ================== 상태 ================== */
 const game=document.getElementById("game");
 const state={
+  tweezers:false,
+  basementKey:false,
+  safeKey:false,
+  frontKey:false,
+  caught:0,
+  deathReason:"",
   input:"",
-  calling:false
+  history:[],
+  hunterTimer:null
 };
 
 /* ================== 렌더 ================== */
-function render(html){
-  game.innerHTML = html;
+function render(html,options=[],back=false){
+  clearTimeout(state.hunterTimer);
+  game.innerHTML=html;
+
+  if(Math.random()<0.35){
+    state.hunterTimer=setTimeout(()=>{
+      state.deathReason="너무 오래 머물렀다. 발소리가 바로 뒤에서 멈췄다.";
+      playChase();
+      death();
+    },12000+Math.random()*10000);
+  }
+
+  if(back && state.history.length){
+    const b=document.createElement("button");
+    b.innerText="뒤로 가기";
+    b.onclick=()=>state.history.pop()();
+    game.appendChild(b);
+  }
+
+  options.forEach(o=>{
+    const btn=document.createElement("button");
+    btn.innerText=o.text;
+    btn.onclick=()=>{
+      unlockAudio();
+      state.history.push(()=>render(html,options,back));
+      o.action();
+    };
+    game.appendChild(btn);
+  });
+}
+
+/* ================== 랜덤 납치범 ================== */
+function randomHunter(next){
+  if(Math.random()<0.25){
+    state.caught++;
+    state.deathReason="숨을 고르는 순간, 기척이 바로 등 뒤에 있었다.";
+    playChase();
+    if(state.caught===1) basementCaptured();
+    else death();
+  }else next();
 }
 
 /* ================== 시작 ================== */
 function part0(){
 render(`
 <div class="part">
-<h2>밖</h2>
-<p>골목 끝에 공중전화가 있다.</p>
-<p class="memo">전화기 아래 메모: 3849</p>
-<button onclick="payphone()">공중전화</button>
+<h2>PART 0 : 새벽의 공원</h2>
+<p>퍽.<br>뒤통수의 충격.</p>
 </div>
-`);
+`,[{text:"눈을 뜬다",action:room}]);
+}
+
+/* ================== 방 ================== */
+function room(){
+stopChase();
+render(`
+<div class="part">
+<h2>방</h2>
+<p>신문지로 막힌 창문. 잠긴 문.</p>
+</div>
+`,[
+{text:"문",action:door},
+{text:"방 조사",action:searchRoom},
+{text:"가만히",action:wait}
+]);
+}
+
+function searchRoom(){
+render(`<p>장기 매매 기록… 이름: 판태현</p>`,[
+{text:"서랍",action:getTweezers},
+{text:"침대 밑",action:()=>{
+  state.deathReason="시체를 건드리는 순간 바닥이 삐걱였다.";
+  randomHunter(room);
+}}
+],true);
+}
+
+function getTweezers(){
+state.tweezers=true;
+render(`<p>핀셋을 얻었다.</p>`,[{text:"문",action:door}]);
+}
+
+function door(){
+if(!state.tweezers){
+render(`<p>문이 잠겨 있다.</p>`,[{text:"뒤로",action:room}]);
+return;
+}
+render(`<p>문이 열린다.</p>`,[{text:"밖으로",action:secondFloor}]);
+}
+
+function wait(){
+state.caught++;
+state.deathReason="아무것도 하지 않는 선택이 가장 위험했다.";
+playChase();
+if(state.caught===1) basementCaptured();
+else death();
+}
+
+/* ================== 2층 ================== */
+function secondFloor(){
+stopChase();
+render(`<div class="part"><h2>2층</h2></div>`,[
+{text:"서재",action:()=>randomHunter(library)},
+{text:"계단",action:kitchen}
+]);
+}
+
+function library(){
+render(`
+<div class="part">
+<h2>서재</h2>
+<p>사진과 해부학 책.</p>
+</div>
+`,[
+{text:"메모",action:memo},
+{text:"서랍",action:getBasementKey},
+{text:"나간다",action:()=>randomHunter(secondFloor)}
+],true);
+}
+
+function memo(){
+render(`<p class="memo">TV의 숫자를 기억해라. 3849</p>`,[{text:"뒤로",action:library}]);
+}
+
+function getBasementKey(){
+state.basementKey=true;
+render(`<p>지하실 열쇠 획득.</p>`,[{text:"뒤로",action:library}]);
+}
+
+/* ================== 납치 ================== */
+function basementCaptured(){
+playChase();
+render(`
+<div class="part">
+<h2>지하실</h2>
+<p>붙잡혀 끌려왔다.</p>
+</div>
+`,[{text:"버틴다",action:secondFloor}]);
+}
+
+/* ================== 주방 / 화장실 ================== */
+function kitchen(){
+render(`
+<div class="part">
+<h2>주방</h2>
+<p>집이 숨을 죽인 것 같다.</p>
+</div>
+`,[
+{text:"화장실",action:()=>randomHunter(bathroom)},
+{text:"거실",action:()=>randomHunter(livingroom)}
+]);
+}
+
+function bathroom(){
+render(`<div class="part"><h2>화장실</h2></div>`,[
+{text:"문 뒤",action:()=>randomHunter(livingroom)},
+{text:"변기 뒤",action:()=>randomHunter(livingroom)},
+{text:"욕조",action:()=>randomHunter(livingroom)}
+]);
+}
+
+/* ================== 거실 ================== */
+function livingroom(){
+stopChase();
+render(`
+<div class="part">
+<h2>거실</h2>
+</div>
+`,[
+{text:"TV",action:tv},
+{text:"서랍",action:livingDrawer},
+{text:"지하실",action:basement},
+{text:"현관",action:frontDoor}
+]);
+}
+
+function tv(){
+render(`<p>TV에 3849가 반복된다.</p>`,[{text:"뒤로",action:livingroom}]);
+}
+
+function livingDrawer(){
+state.safeKey=true;
+render(`<p>금고 열쇠 획득.</p>`,[{text:"뒤로",action:livingroom}]);
+}
+
+/* ================== 지하실 ================== */
+function basement(){
+if(!state.basementKey){
+render(`<p>잠겨 있다.</p>`,[{text:"뒤로",action:livingroom}]);
+return;
+}
+render(`
+<div class="part">
+<h2>지하실</h2>
+</div>
+`,[
+{text:"금고",action:basementSafe},
+{text:"나간다",action:basementFreeMove}
+]);
+}
+
+function basementSafe(){
+if(!state.safeKey){
+render(`<p>금고는 잠겨 있다.</p>`,[{text:"뒤로",action:basement}]);
+return;
+}
+state.frontKey=true;
+render(`
+<p>
+금고 안에 작은 열쇠.<br>
+<i>현관 열쇠다.</i>
+</p>
+`,[{text:"뒤로",action:basement}]);
+}
+
+function basementFreeMove(){
+render(`<p>이동</p>`,[
+{text:"2층",action:()=>randomHunter(secondFloor)},
+{text:"주방",action:()=>randomHunter(kitchen)},
+{text:"거실",action:()=>randomHunter(livingroom)},
+{text:"현관",action:frontDoor}
+],true);
+}
+
+/* ================== 현관 ================== */
+function frontDoor(){
+state.input="";
+drawFrontDoor();
+}
+
+function drawFrontDoor(){
+render(`
+<h2>현관 도어락</h2>
+<div class="display">${state.input}</div>
+<div class="keypad" id="pad"></div>
+`,[],true);
+
+const pad=document.getElementById("pad");
+[1,2,3,4,5,6,7,8,9,0].forEach(n=>{
+  const b=document.createElement("button");
+  b.innerText=n;
+  b.onclick=()=>{state.input+=n;drawFrontDoor();};
+  pad.appendChild(b);
+});
+const ok=document.createElement("button");
+ok.innerText="확인";
+ok.onclick=checkDoor;
+pad.appendChild(ok);
+}
+
+function checkDoor(){
+if(!state.frontKey){
+state.deathReason="도어락은 반응이 없다.";
+death();
+return;
+}
+if(state.input==="3849") outside();
+else{
+state.deathReason="경보음과 함께 발소리가 터져 나왔다.";
+playChase();
+death();
+}
+}
+
+/* ================== 바깥 ================== */
+function outside(){
+stopChase();
+render(`
+<div class="part">
+<h2>밖</h2>
+<p>차가운 공기.<br>골목 끝에 공중전화가 있다.</p>
+<p class="memo">전화기 아래 낡은 메모: 3849</p>
+</div>
+`,[{text:"공중전화",action:payphone}]);
 }
 
 /* ================== 공중전화 ================== */
 function payphone(){
-  state.input="";
-  state.calling=false;
-  drawPayphone();
+state.input="";
+drawPayphone();
 }
 
 function drawPayphone(){
 render(`
 <h2>공중전화</h2>
-<div class="display">${state.input || " "}</div>
+<div class="display">${state.input}</div>
 <div class="keypad" id="pad"></div>
-`);
-const pad=document.getElementById("pad");
+`,[],true);
 
+const pad=document.getElementById("pad");
 [1,2,3,4,5,6,7,8,9,0].forEach(n=>{
   const b=document.createElement("button");
   b.innerText=n;
   b.onclick=()=>{
-    if(state.calling) return;
-    dialTone.currentTime=0;
-    dialTone.play();
+    phoneKeySfx.currentTime=0;
+    phoneKeySfx.play();
     state.input+=n;
     drawPayphone();
   };
@@ -111,48 +385,32 @@ const pad=document.getElementById("pad");
 
 const ok=document.createElement("button");
 ok.innerText="통화";
-ok.onclick=startCall;
+ok.onclick=callPhone;
 pad.appendChild(ok);
 }
 
-/* ================== 통화 처리 ================== */
-function startCall(){
-  if(state.calling) return;
-  state.calling=true;
+function callPhone(){
+phoneConnectSfx.currentTime=0;
+phoneConnectSfx.play();
 
-  render(`
-  <h2>공중전화</h2>
-  <p>…연결 중…</p>
-  `);
-
-  connectTone.currentTime=0;
-  connectTone.play();
-
-  setTimeout(()=>{
-    connectTone.pause();
-    handleCallResult();
-  },2000);
-}
-
-function handleCallResult(){
+setTimeout(()=>{
   if(state.input==="112"){
-    render(`
-    <h2>히든 엔딩 : 사이렌</h2>
-    <p>수화기 너머로 사이렌 소리가 번진다.</p>
-    `);
+    render(`<h2>히든 엔딩 : 사이렌</h2>`);
   }
   else if(state.input==="3849"){
-    render(`
-    <h2>히든 엔딩 : 거래</h2>
-    <p>낮고 건조한 목소리가 주소를 묻는다.</p>
-    `);
+    render(`<h2>히든 엔딩 : 거래</h2>`);
   }
   else{
-    render(`
-    <h2>사망</h2>
-    <p>뚝. 신호가 끊겼고, 뒤에서 숨소리가 들렸다.</p>
-    `);
+    state.deathReason="신호음이 끊기고 뒤에서 숨소리가 겹쳤다.";
+    death();
   }
+},2000);
+}
+
+/* ================== 사망 ================== */
+function death(){
+clearTimeout(state.hunterTimer);
+render(`<h2>사망</h2><p>${state.deathReason}</p>`);
 }
 
 part0();
