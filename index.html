@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -131,7 +131,7 @@ function hideSuccess() {
 function basement() {
   state.place = "지하실";
   render(
-    "지하실이다. 습하고 어둡다. 한쪽에 금고가 놓여 있다.",
+    "지하실이다. 습하고 어둡다.",
     [
       { label:"금고를 조사한다", action:"safe()" },
       { label:"나간다", action:"freeMove()" }
@@ -157,7 +157,7 @@ function safe() {
 
 function passwordInput() {
   document.getElementById("log").innerHTML =
-    `<p>비밀번호를 입력하라</p><input id="pw" type="text" autofocus><br>`;
+    `<p>비밀번호를 입력하라</p><input id="pw"><br>`;
   document.getElementById("choices").innerHTML =
     `<button onclick="checkPW()">확인</button>`;
 }
