@@ -395,18 +395,13 @@ phoneConnectSfx.play();
 
 setTimeout(()=>{
   if(state.input==="112"){
-    render(`<h2>히든 엔딩 : 한패</h2>`);
+    render(`<h2>히든 엔딩 : 사이렌</h2>`);
   }
-  else{
-    state.deathReason="네 테현씨죠? 지금 바로 출동하겠습니다 
-      .";
-    death();
   else if(state.input==="3849"){
     render(`<h2>히든 엔딩 : 거래</h2>`);
   }
   else{
-    state.deathReason="신호음이 끊기고 네 태리 상회입니다 
-      .";
+    state.deathReason="신호음이 끊기고 뒤에서 숨소리가 겹쳤다.";
     death();
   }
 },2000);
