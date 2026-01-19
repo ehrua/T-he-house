@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>히든 엔딩 : 사이렌</title>
+<title>히든 엔딩 : 112</title>
 <style>
 body{
 background:#000;
@@ -10,16 +10,13 @@ color:#eee;
 font-family:"Noto Serif KR",serif;
 line-height:1.8;
 }
-#wrap{
+#game{
 max-width:800px;
 margin:60px auto;
 padding:20px;
 }
-.fade{
-opacity:0;
-animation:fadein 2s forwards;
-}
-@keyframes fadein{to{opacity:1;}}
+.fade{opacity:0;animation:fade 1.5s forwards;}
+@keyframes fade{to{opacity:1;}}
 button{
 width:100%;
 padding:14px;
@@ -36,126 +33,145 @@ hr{border:0;border-top:1px solid #333;margin:40px 0;}
 </head>
 
 <body>
-<div id="wrap"></div>
+<div id="game"></div>
 
 <script>
 /* ===== 사운드 ===== */
 const hiddenBgm = new Audio("./sound/Symmetry.mp3");
-const phoneConnect = new Audio("./sound/connect.mp3");
+const phoneRing = new Audio("./sound/phone.mp3"); // 통화음 (뚜-뚜-)
+const connectSfx = new Audio("./sound/connect.mp3"); // 받는 순간
 const sirenSfx = new Audio("./sound/siren.mp3");
 
 hiddenBgm.loop = true;
-hiddenBgm.volume = 0.6;
-phoneConnect.volume = 0.9;
+hiddenBgm.volume = 0.5;
+phoneRing.loop = true;
+phoneRing.volume = 0.9;
+connectSfx.volume = 0.9;
 sirenSfx.volume = 0.7;
 
-const wrap = document.getElementById("wrap");
+const game = document.getElementById("game");
 
 function render(html){
-wrap.innerHTML = html;
+game.innerHTML = html;
 }
 
-function start(){
-hiddenBgm.play().catch(()=>{});
-phoneConnect.currentTime = 0;
-phoneConnect.play();
-
+/* ===== 시작 ===== */
 render(`
 <div class="fade">
 <h2>공중전화</h2>
-<p>…뚜…</p>
+<p>112를 눌렀다.</p>
+<button onclick="dial()">통화 시도</button>
 </div>
 `);
-setTimeout(call1,2500);
+
+function dial(){
+hiddenBgm.play().catch(()=>{});
+phoneRing.currentTime = 0;
+phoneRing.play();
+
+render(`
+<div class="fade">
+<p>뚜…</p>
+<p>뚜…</p>
+<p>뚜…</p>
+</div>
+`);
+
+setTimeout(answer, 3000);
 }
 
-function call1(){
+/* ===== 경찰 받음 ===== */
+function answer(){
+phoneRing.pause();
+phoneRing.currentTime = 0;
+connectSfx.play();
+
 render(`
 <div class="fade">
 <p><b>경찰:</b> 112입니다.</p>
-<p><b>경찰:</b> 판태현 씨, 맞습니까?</p>
+<p><b>경찰:</b> 판태현 씨죠?</p>
 </div>
 `);
-setTimeout(call2,3000);
+
+setTimeout(dialog1, 3000);
 }
 
-function call2(){
+function dialog1(){
 render(`
 <div class="fade">
 <p><b>나:</b> …네?</p>
 <p><b>나:</b> 제 이름을 어떻게…</p>
 </div>
 `);
-setTimeout(call3,3000);
+setTimeout(dialog2, 3000);
 }
 
-function call3(){
+function dialog2(){
 render(`
 <div class="fade">
-<p><b>경찰:</b> 위치는 확인했습니다.</p>
-<p><b>경찰:</b> 지금 그 자리에 계세요.</p>
-<p class="memo">※ 수화기 너머에서 타자 치는 소리가 들린다.</p>
+<p><b>경찰:</b> 위치 확인했습니다.</p>
+<p><b>경찰:</b> 지금 그 자리에 그대로 계세요.</p>
+<p class="memo">키보드 두드리는 소리가 들린다.</p>
 </div>
 `);
-setTimeout(call4,3500);
+setTimeout(dialog3, 3500);
 }
 
-function call4(){
+function dialog3(){
 render(`
 <div class="fade">
-<p><b>나:</b> 누가… 누가 쫓아와요.</p>
-<p><b>나:</b> 여기… 이상해요.</p>
+<p><b>나:</b> 누군가… 근처에 있어요.</p>
+<p><b>나:</b> 발소리가…</p>
 </div>
 `);
-setTimeout(call5,3000);
+setTimeout(dialog4, 3000);
 }
 
-function call5(){
+function dialog4(){
 render(`
 <div class="fade">
 <p><b>경찰:</b> 알고 있습니다.</p>
-<p><b>경찰:</b> 숨을 크게 쉬지 마세요.</p>
+<p><b>경찰:</b> 절대 뒤돌아보지 마세요.</p>
 <p><b>경찰:</b> 곧 도착합니다.</p>
 </div>
 `);
-setTimeout(siren,3500);
+setTimeout(siren, 3500);
 }
 
+/* ===== 구조 ===== */
 function siren(){
 sirenSfx.play().catch(()=>{});
 render(`
 <div class="fade">
-<p>수화기 너머로 사이렌 소리가 겹쳐 들린다.</p>
+<p>멀리서 사이렌 소리가 겹쳐 들린다.</p>
 </div>
 `);
-setTimeout(scene1,3500);
+setTimeout(scene1, 3500);
 }
 
 function scene1(){
 render(`
 <div class="fade">
 <p>
-골목 끝에서 붉고 푸른 불빛이 번쩍인다.<br>
-그제서야 다리에 힘이 풀린다.
+골목 끝이 붉고 푸른 빛으로 물든다.<br>
+그제서야 손에서 수화기가 떨어진다.
 </p>
 </div>
 `);
-setTimeout(scene2,3500);
+setTimeout(scene2, 3500);
 }
 
 function scene2(){
 render(`
 <div class="fade">
 <p>
-경찰은 아무 질문도 하지 않는다.<br>
-이름도, 설명도 요구하지 않는다.
+경찰은 질문하지 않는다.<br>
+신고 내용도, 상황 설명도 요구하지 않는다.
 </p>
-<p class="memo">
-“이미 알고 있었다.”
-</p>
+<p class="memo">이미 알고 있었다는 듯이.</p>
 </div>
 `);
-setTimeout(scene3,4000);
+setTimeout(scene3, 4000);
 }
 
 function scene3(){
@@ -163,57 +179,29 @@ render(`
 <div class="fade">
 <hr>
 <p>
-구급차 안에서 잠시 눈을 붙인다.
-</p>
-<p>
-창문에 비친 내 얼굴 옆으로<br>
-누군가의 그림자가 겹쳐 보인다.
+구급차 안.<br>
+창문에 비친 내 얼굴 옆으로
+다른 사람의 그림자가 겹친다.
 </p>
 </div>
 `);
-setTimeout(scene4,4500);
+setTimeout(finale, 4500);
 }
 
-function scene4(){
+function finale(){
+hiddenBgm.volume = 0.35;
 render(`
 <div class="fade">
 <p class="memo">
 112는 항상 연결된다.<br>
-하지만 누가 받는지는 알 수 없다.
+하지만 누가 받는지는 아무도 모른다.
 </p>
 <hr>
-<button onclick="ending()">끝까지 본다</button>
+<h2>히든 엔딩</h2>
+<p class="memo">SIREN</p>
 </div>
 `);
 }
-
-function ending(){
-hiddenBgm.volume = 0.4;
-render(`
-<div class="fade">
-<h2>END</h2>
-<p>
-다음 날 뉴스에는<br>
-<i>“실종 사건, 피해자 구조”</i>라는 짧은 기사만 실렸다.
-</p>
-
-<p class="memo">
-납치범에 대한 언급은 없었다.<br>
-공중전화에 대한 기록도 없었다.
-</p>
-
-<p class="memo">
-그리고 112 통화 기록은<br>
-존재하지 않았다.
-</p>
-
-<hr>
-<p class="memo">히든 엔딩 완료</p>
-</div>
-`);
-}
-
-start();
 </script>
 </body>
 </html>
