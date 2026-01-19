@@ -2,164 +2,165 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>숨을 죽여라</title>
+<title>히든 엔딩 테스트</title>
 <style>
 body{
     background:#000;
     color:#eee;
     font-family:"Noto Serif KR",serif;
-    text-align:center;
 }
-#wrap{
-    max-width:600px;
-    margin:60px auto;
+#game{
+    max-width:700px;
+    margin:40px auto;
 }
 button{
     width:100%;
     padding:14px;
-    margin:10px 0;
+    margin-top:10px;
     background:#111;
     color:#eee;
     border:1px solid #444;
-    font-size:16px;
     cursor:pointer;
 }
-#barWrap{
-    width:100%;
-    height:22px;
-    border:1px solid #555;
-    margin-top:20px;
+button:active{
+    background:#333;
 }
-#bar{
+.bar{
+    width:100%;
+    height:20px;
+    background:#222;
+    margin-top:15px;
+}
+.fill{
     height:100%;
+    background:#aaa;
     width:100%;
-    background:#b00;
-    transition:width 0.1s linear;
-}
-#state{
-    margin-top:20px;
-    font-size:18px;
+    transition:width 0.2s linear;
 }
 </style>
 </head>
 
 <body>
-<div id="wrap">
-    <h2>숨을 죽여라</h2>
-    <p id="state">시작을 누르세요</p>
-
-    <button id="startBtn">시작</button>
-    <button id="holdBtn" disabled>숨 참기</button>
-
-    <div id="barWrap"><div id="bar"></div></div>
-</div>
+<div id="game"></div>
 
 <script>
-/* ===== 오디오 ===== */
-const leaves = new Audio("./sound/fallenleaves.mp3");
-const scream = new Audio("./sound/screm2.mp3");
-const bgm = new Audio("./sound/Symmetry.mp3");
+/* ===== 사운드 ===== */
+const bgm = new Audio("./sound/TheDread.mp3");
+const phoneSfx = new Audio("./sound/phone.mp3");
+const leavesSfx = new Audio("./sound/fallenleaves.mp3");
+const screamSfx = new Audio("./sound/screm2.mp3");
 
-leaves.volume = 0.9;
-scream.volume = 1.0;
-bgm.volume = 0.25;
+bgm.loop = true;
+bgm.volume = 0.2; // 이 구간 전용 낮은 볼륨
 
 /* ===== 상태 ===== */
 let holding = false;
-let gauge = 100;
-let danger = false;
-let mainLoop = null;
+let breath = 100;
+let survived = 0;
+let soundTimer = null;
 
-/* ===== 오디오 언락 ===== */
-function unlockAudio(){
-    [leaves, scream, bgm].forEach(a=>{
-        a.play().then(()=>{
-            a.pause();
-            a.currentTime = 0;
-        }).catch(()=>{});
-    });
+/* ===== 렌더 ===== */
+const game = document.getElementById("game");
+function render(html){
+    game.innerHTML = html;
 }
 
-/* ===== 버튼 ===== */
-const holdBtn = document.getElementById("holdBtn");
-holdBtn.onmousedown = ()=>holding = true;
-holdBtn.onmouseup = ()=>holding = false;
-holdBtn.onmouseleave = ()=>holding = false;
+/* ===== 시작 ===== */
+render(`
+<h2>공중전화</h2>
+<p>수화기를 들었다.</p>
+<button id="call112">112를 누른다</button>
+`);
 
-document.getElementById("startBtn").onclick = ()=>{
-    unlockAudio();
-    bgm.play();
-    holdBtn.disabled = false;
-    startGame();
+document.getElementById("call112").onclick = () => {
+    bgm.play().catch(()=>{});
+    phoneSfx.currentTime = 0;
+    phoneSfx.play();
+    setTimeout(policeCall,3000);
 };
 
-/* ===== 게임 시작 ===== */
-function startGame(){
-    mainLoop = setInterval(updateGauge, 50);
-    cycleSound();
+/* ===== 통화 ===== */
+function policeCall(){
+    render(`
+<p>뚜… 뚜…</p>
+<p>경찰: 판태현 씨죠?</p>
+<p>태현: 네? 제 이름을 어떻게…</p>
+<p>경찰: 지금 당장 출동하겠습니다.</p>
+<button id="hide">전화를 끊고 숨는다</button>
+`);
+    document.getElementById("hide").onclick = startMiniGame;
 }
 
-/* ===== 게이지 로직 ===== */
-function updateGauge(){
-    if(danger){
-        if(holding){
-            gauge -= 0.8;
-        }else{
-            gauge -= 2.2;
-        }
+/* ===== 미니게임 ===== */
+function startMiniGame(){
+    breath = 100;
+    survived = 0;
+
+    render(`
+<h2>숨을 참아라</h2>
+<p>소리가 나면 들킬 것이다.</p>
+
+<div class="bar">
+    <div class="fill" id="breathBar"></div>
+</div>
+
+<button id="holdBtn">숨 참기</button>
+`);
+
+    const btn = document.getElementById("holdBtn");
+
+    // ❗ 버튼에서만 숨참기
+    btn.addEventListener("mousedown",()=>holding=true);
+    btn.addEventListener("mouseup",()=>holding=false);
+    btn.addEventListener("mouseleave",()=>holding=false);
+    btn.addEventListener("touchstart",(e)=>{
+        e.preventDefault();
+        holding=true;
+    });
+    btn.addEventListener("touchend",()=>holding=false);
+
+    soundTimer = setInterval(playRandomSound, 2000);
+    gameLoop();
+}
+
+/* ===== 랜덤 소리 ===== */
+function playRandomSound(){
+    if(Math.random()<0.6){
+        leavesSfx.currentTime = 0;
+        leavesSfx.play();
     }else{
-        if(!holding){
-            gauge += 1.2;
+        screamSfx.currentTime = 0;
+        screamSfx.play();
+    }
+}
+
+/* ===== 게임 루프 ===== */
+function gameLoop(){
+    const bar = document.getElementById("breathBar");
+
+    const loop = setInterval(()=>{
+        if(holding){
+            breath -= 2;
+            survived += 1;
         }else{
-            gauge -= 0.5;
+            breath += 1;
         }
-    }
 
-    gauge = Math.max(0, Math.min(100, gauge));
-    document.getElementById("bar").style.width = gauge + "%";
+        breath = Math.max(0,Math.min(100,breath));
+        bar.style.width = breath + "%";
 
-    if(gauge <= 0){
-        die();
-    }
-}
+        if(breath <= 0){
+            clearInterval(loop);
+            clearInterval(soundTimer);
+            render("<h2>사망</h2><p>숨을 참지 못했다.</p>");
+        }
 
-/* ===== 소리 사이클 ===== */
-function cycleSound(){
-    const safeTime = rand(2000, 5000);
-    const dangerTime = rand(1200, 2500);
-
-    // 정적
-    danger = false;
-    leaves.pause();
-    document.getElementById("state").innerText = "……조용하다";
-
-    setTimeout(()=>{
-        // 위험
-        danger = true;
-        leaves.currentTime = 0;
-        leaves.play();
-        document.getElementById("state").innerText = "소리가 난다…";
-
-        setTimeout(()=>{
-            leaves.pause();
-            cycleSound();
-        }, dangerTime);
-
-    }, safeTime);
-}
-
-/* ===== 사망 ===== */
-function die(){
-    clearInterval(mainLoop);
-    leaves.pause();
-    bgm.pause();
-    scream.play();
-    document.getElementById("state").innerText = "발각되었다";
-}
-
-/* ===== 유틸 ===== */
-function rand(min,max){
-    return Math.random()*(max-min)+min;
+        if(survived >= 60){
+            clearInterval(loop);
+            clearInterval(soundTimer);
+            render("<h2>히든 엔딩</h2><p>경찰차 사이렌이 울린다.</p>");
+        }
+    },200);
 }
 </script>
 </body>
