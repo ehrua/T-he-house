@@ -57,7 +57,8 @@ bgm.volume = 0.2; // 이 구간 전용 낮은 볼륨
 let holding = false;
 let breath = 100;
 let survived = 0;
-let soundTimer = null;
+let leavesTimer = null;
+let screamTimer = null;
 
 /* ===== 렌더 ===== */
 const game = document.getElementById("game");
@@ -81,8 +82,11 @@ document.getElementById("call112").onclick = () => {
 
 /* ===== 통화 ===== */
 function policeCall(){
+    phoneSfx.pause();              // ✅ 연결음 즉시 종료
+    phoneSfx.currentTime = 0;
+
     render(`
-<p>뚜… 뚜…</p>
+<p>뚜…</p>
 <p>경찰: 판태현 씨죠?</p>
 <p>태현: 네? 제 이름을 어떻게…</p>
 <p>경찰: 지금 당장 출동하겠습니다.</p>
@@ -109,7 +113,7 @@ function startMiniGame(){
 
     const btn = document.getElementById("holdBtn");
 
-    // ❗ 버튼에서만 숨참기
+    // 버튼 눌릴 때만 숨참기
     btn.addEventListener("mousedown",()=>holding=true);
     btn.addEventListener("mouseup",()=>holding=false);
     btn.addEventListener("mouseleave",()=>holding=false);
@@ -119,19 +123,18 @@ function startMiniGame(){
     });
     btn.addEventListener("touchend",()=>holding=false);
 
-    soundTimer = setInterval(playRandomSound, 2000);
-    gameLoop();
-}
-
-/* ===== 랜덤 소리 ===== */
-function playRandomSound(){
-    if(Math.random()<0.6){
+    /* === 소리 타이밍 === */
+    leavesTimer = setInterval(()=>{
         leavesSfx.currentTime = 0;
         leavesSfx.play();
-    }else{
+    }, 4000); // 낙엽은 비교적 자주
+
+    screamTimer = setInterval(()=>{
         screamSfx.currentTime = 0;
         screamSfx.play();
-    }
+    }, 20000); // ✅ 비명은 20초에 한 번
+
+    gameLoop();
 }
 
 /* ===== 게임 루프 ===== */
@@ -150,17 +153,22 @@ function gameLoop(){
         bar.style.width = breath + "%";
 
         if(breath <= 0){
-            clearInterval(loop);
-            clearInterval(soundTimer);
+            clearAll(loop);
             render("<h2>사망</h2><p>숨을 참지 못했다.</p>");
         }
 
         if(survived >= 60){
-            clearInterval(loop);
-            clearInterval(soundTimer);
-            render("<h2>히든 엔딩</h2><p>경찰차 사이렌이 울린다.</p>");
+            clearAll(loop);
+            render("<h2>히든 엔딩</h2><p>멀리서 사이렌이 들린다.</p>");
         }
     },200);
+}
+
+/* ===== 정리 ===== */
+function clearAll(loop){
+    clearInterval(loop);
+    clearInterval(leavesTimer);
+    clearInterval(screamTimer);
 }
 </script>
 </body>
