@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>숨 참기 테스트</title>
+<title>숨을 죽여라</title>
 <style>
 body{
     background:#000;
@@ -24,7 +24,6 @@ button{
     font-size:16px;
     cursor:pointer;
 }
-button:hover{background:#222;}
 #barWrap{
     width:100%;
     height:22px;
@@ -35,7 +34,11 @@ button:hover{background:#222;}
     height:100%;
     width:100%;
     background:#b00;
-    transition:width 0.08s linear;
+    transition:width 0.1s linear;
+}
+#state{
+    margin-top:20px;
+    font-size:18px;
 }
 </style>
 </head>
@@ -43,7 +46,7 @@ button:hover{background:#222;}
 <body>
 <div id="wrap">
     <h2>숨을 죽여라</h2>
-    <p id="msg">시작을 눌러야 소리가 들린다</p>
+    <p id="state">시작을 누르세요</p>
 
     <button id="startBtn">시작</button>
     <button id="holdBtn" disabled>숨 참기</button>
@@ -52,76 +55,111 @@ button:hover{background:#222;}
 </div>
 
 <script>
-/* ===== 오디오 (경로 수정 완료) ===== */
+/* ===== 오디오 ===== */
 const leaves = new Audio("./sound/fallenleaves.mp3");
 const scream = new Audio("./sound/screm2.mp3");
 const bgm = new Audio("./sound/Symmetry.mp3");
 
-leaves.loop = true;
-bgm.loop = true;
-
 leaves.volume = 0.9;
 scream.volume = 1.0;
-bgm.volume = 0.3;
+bgm.volume = 0.25;
 
-let audioUnlocked = false;
+/* ===== 상태 ===== */
+let holding = false;
+let gauge = 100;
+let danger = false;
+let mainLoop = null;
 
-/* 🔓 자동재생 차단 해제 */
+/* ===== 오디오 언락 ===== */
 function unlockAudio(){
-    if(audioUnlocked) return;
-
     [leaves, scream, bgm].forEach(a=>{
         a.play().then(()=>{
             a.pause();
             a.currentTime = 0;
         }).catch(()=>{});
     });
-
-    audioUnlocked = true;
 }
 
-/* ===== 게임 로직 ===== */
-let holding = false;
-let gauge = 100;
-let loop = null;
-
-document.getElementById("startBtn").onclick = ()=>{
-    unlockAudio();
-    bgm.play();
-    leaves.play();
-
-    document.getElementById("msg").innerText =
-        "소리가 들리는 동안 숨을 참아라";
-
-    document.getElementById("holdBtn").disabled = false;
-    startLoop();
-};
-
+/* ===== 버튼 ===== */
 const holdBtn = document.getElementById("holdBtn");
 holdBtn.onmousedown = ()=>holding = true;
 holdBtn.onmouseup = ()=>holding = false;
 holdBtn.onmouseleave = ()=>holding = false;
 
-function startLoop(){
-    loop = setInterval(()=>{
+document.getElementById("startBtn").onclick = ()=>{
+    unlockAudio();
+    bgm.play();
+    holdBtn.disabled = false;
+    startGame();
+};
+
+/* ===== 게임 시작 ===== */
+function startGame(){
+    mainLoop = setInterval(updateGauge, 50);
+    cycleSound();
+}
+
+/* ===== 게이지 로직 ===== */
+function updateGauge(){
+    if(danger){
         if(holding){
-            gauge -= 0.9;
+            gauge -= 0.8;
         }else{
-            gauge += 0.6;
+            gauge -= 2.2;
         }
+    }else{
+        if(!holding){
+            gauge += 1.2;
+        }else{
+            gauge -= 0.5;
+        }
+    }
 
-        gauge = Math.max(0, Math.min(100, gauge));
-        document.getElementById("bar").style.width = gauge + "%";
+    gauge = Math.max(0, Math.min(100, gauge));
+    document.getElementById("bar").style.width = gauge + "%";
 
-        if(gauge <= 0){
-            clearInterval(loop);
+    if(gauge <= 0){
+        die();
+    }
+}
+
+/* ===== 소리 사이클 ===== */
+function cycleSound(){
+    const safeTime = rand(2000, 5000);
+    const dangerTime = rand(1200, 2500);
+
+    // 정적
+    danger = false;
+    leaves.pause();
+    document.getElementById("state").innerText = "……조용하다";
+
+    setTimeout(()=>{
+        // 위험
+        danger = true;
+        leaves.currentTime = 0;
+        leaves.play();
+        document.getElementById("state").innerText = "소리가 난다…";
+
+        setTimeout(()=>{
             leaves.pause();
-            scream.currentTime = 0;
-            scream.play();
-            document.getElementById("msg").innerText =
-                "숨을 참지 못했다";
-        }
-    },50);
+            cycleSound();
+        }, dangerTime);
+
+    }, safeTime);
+}
+
+/* ===== 사망 ===== */
+function die(){
+    clearInterval(mainLoop);
+    leaves.pause();
+    bgm.pause();
+    scream.play();
+    document.getElementById("state").innerText = "발각되었다";
+}
+
+/* ===== 유틸 ===== */
+function rand(min,max){
+    return Math.random()*(max-min)+min;
 }
 </script>
 </body>
