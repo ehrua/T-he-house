@@ -67,20 +67,15 @@ hiddenBgm.play().catch(()=>{});
 const game=document.getElementById("game");
 const state={
 tweezers:false,basementKey:false,safeKey:false,frontKey:false,
-caught:0,deathReason:"",input:"",history:[],hunterTimer:null
+caught:0,deathReason:"",input:"",history:[],
+hunterTimer:null, escapeTimer:null
 };
 
 /* ================== 렌더 ================== */
 function render(html,options=[],back=false){
 clearTimeout(state.hunterTimer);
+clearTimeout(state.escapeTimer);
 game.innerHTML=html;
-
-if(Math.random()<0.3){
-state.hunterTimer=setTimeout(()=>{
-state.deathReason="기척이 바로 뒤에서 멈췄다.";
-playChase(); death();
-},12000+Math.random()*10000);
-}
 
 if(back&&state.history.length){
 const b=document.createElement("button");
@@ -101,13 +96,37 @@ game.appendChild(btn);
 });
 }
 
-/* ================== 랜덤 납치 ================== */
-function randomHunter(next){
-if(Math.random()<0.2){
-state.caught++;
-state.deathReason="숨을 고르는 순간, 기척이 겹쳤다.";
+/* ================== 3초 도망/숨기 ================== */
+function hunterEncounter(success){
 playChase();
-state.caught===1?basementCaptured():death();
+
+render(`
+<div class="part">
+<p>바로 뒤에서 숨소리가 들린다.</p>
+</div>
+`,[
+{text:"숨는다",action:()=>{
+clearTimeout(state.escapeTimer);
+stopChase();
+success();
+}},
+{text:"도망친다",action:()=>{
+clearTimeout(state.escapeTimer);
+stopChase();
+success();
+}}
+]);
+
+state.escapeTimer=setTimeout(()=>{
+state.deathReason="결정하지 못한 사이, 손이 닿았다.";
+death();
+},3000);
+}
+
+/* ================== 랜덤 납치 (수정됨) ================== */
+function randomHunter(next){
+if(Math.random()<0.25){
+hunterEncounter(next);
 }else next();
 }
 
@@ -132,7 +151,7 @@ render(`
 `,[
 {text:"문",action:door},
 {text:"방 조사",action:searchRoom},
-{text:"가만히",action:wait}
+{text:"가만히",action:()=>hunterEncounter(room)}
 ]);
 }
 
@@ -149,11 +168,6 @@ render(`<p>문이 잠겨 있다.</p>`,[{text:"뒤로",action:room}]);
 return;
 }
 render(`<p>문이 열린다.</p>`,[{text:"밖으로",action:secondFloor}]);
-}
-
-function wait(){
-state.caught++; state.deathReason="아무것도 하지 않는 선택.";
-playChase(); state.caught===1?basementCaptured():death();
 }
 
 /* ================== 2층 ================== */
@@ -209,11 +223,6 @@ render(`<p>현관 열쇠다.</p>`,[{text:"뒤로",action:basement}]);
 ]);
 }
 
-function basementCaptured(){
-render(`<div class="part"><h2>지하실</h2><p>끌려왔다.</p></div>`,
-[{text:"버틴다",action:secondFloor}]);
-}
-
 /* ================== 현관 ================== */
 function frontDoor(){
 state.input="";
@@ -252,65 +261,10 @@ render(`
 `,[{text:"공중전화",action:payphone}]);
 }
 
-/* ================== 공중전화 + 미니게임 ================== */
-function payphone(){
-state.input="";
-drawKeypad("공중전화",callPhone);
-}
-
-function callPhone(){
-phoneConnectSfx.play();
-setTimeout(()=>{
-if(state.input==="112") startMiniGame();
-else if(state.input==="3849"){playHidden(); render(`<h2>히든 엔딩 : 거래</h2>`);}
-else{state.deathReason="신호가 끊겼다."; death();}
-},2000);
-}
-
-/* ================== 숨 참기 ================== */
-let holding=false,breath=100,survived=0,leavesTimer,screamTimer;
-function startMiniGame(){
-playHidden();
-render(`
-<h2>숨을 참아라</h2>
-<p>소리가 나면 끝이다.</p>
-<div class="bar"><div class="fill" id="breathBar"></div></div>
-<button id="holdBtn">숨 참기</button>
-`);
-const btn=document.getElementById("holdBtn");
-btn.onmousedown=()=>holding=true;
-btn.onmouseup=btn.onmouseleave=()=>holding=false;
-
-leavesTimer=setInterval(()=>{
-if(leavesSfx.paused){
-leavesSfx.volume=Math.random()<.2?1:.6;
-leavesSfx.currentTime=0; leavesSfx.play();
-}},7000+Math.random()*5000);
-
-screamTimer=setInterval(()=>{
-screamSfx.currentTime=0; screamSfx.play();
-},20000);
-
-const loop=setInterval(()=>{
-if(holding){breath-=2; survived++;}
-else breath+=1;
-breath=Math.max(0,Math.min(100,breath));
-document.getElementById("breathBar").style.width=breath+"%";
-
-if(breath<=0){clearAll(loop); render(`<h2>사망</h2><p>숨이 새어 나갔다.</p>`);}
-if(survived>=60){clearAll(loop); render(`<h2>히든 엔딩 : 사이렌</h2><p>멀리서 사이렌.</p>`);}
-},200);
-}
-
-function clearAll(loop){
-clearInterval(loop);
-clearInterval(leavesTimer);
-clearInterval(screamTimer);
-}
-
 /* ================== 사망 ================== */
 function death(){
 clearTimeout(state.hunterTimer);
+clearTimeout(state.escapeTimer);
 render(`<h2>사망</h2><p>${state.deathReason}</p>`);
 }
 
