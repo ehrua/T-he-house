@@ -52,9 +52,9 @@ button:hover{background:#222;}
 </div>
 
 <script>
-/* ================== 오디오 ================== */
-const leaves = new Audio("./fallenleaves.mp3"); // ✅ 확인
-const scream = new Audio("./screm2.mp3");       // ✅ 확인
+/* ===== 오디오 (경로 수정 완료) ===== */
+const leaves = new Audio("./sound/fallenleaves.mp3");
+const scream = new Audio("./sound/screm2.mp3");
 const bgm = new Audio("./sound/Symmetry.mp3");
 
 leaves.loop = true;
@@ -62,11 +62,11 @@ bgm.loop = true;
 
 leaves.volume = 0.9;
 scream.volume = 1.0;
-bgm.volume = 0.3; // 이 구간만 BGM 작게
+bgm.volume = 0.3;
 
 let audioUnlocked = false;
 
-/* 🔓 브라우저 자동재생 차단 해제 */
+/* 🔓 자동재생 차단 해제 */
 function unlockAudio(){
     if(audioUnlocked) return;
 
@@ -80,13 +80,13 @@ function unlockAudio(){
     audioUnlocked = true;
 }
 
-/* ================== 게임 로직 ================== */
+/* ===== 게임 로직 ===== */
 let holding = false;
 let gauge = 100;
 let loop = null;
 
 document.getElementById("startBtn").onclick = ()=>{
-    unlockAudio();      // 🔥 이게 없으면 소리 안 남
+    unlockAudio();
     bgm.play();
     leaves.play();
 
