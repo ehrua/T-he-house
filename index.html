@@ -4,167 +4,128 @@
 <meta charset="UTF-8">
 <title>숨 참기 테스트</title>
 <style>
-    body{
-        background:#000;
-        color:#eee;
-        font-family:"Noto Serif KR",serif;
-        display:flex;
-        justify-content:center;
-        align-items:center;
-        height:100vh;
-        margin:0;
-    }
-    #game{
-        width:420px;
-        text-align:center;
-    }
-    h2{margin-bottom:10px;}
-    #barWrap{
-        width:100%;
-        height:24px;
-        background:#222;
-        border:1px solid #555;
-        margin:20px 0;
-    }
-    #bar{
-        height:100%;
-        width:100%;
-        background:#7a0000;
-        transition:width 0.1s linear;
-    }
-    button{
-        width:100%;
-        padding:14px;
-        font-size:18px;
-        background:#111;
-        color:#eee;
-        border:1px solid #444;
-        cursor:pointer;
-    }
-    button:active{
-        background:#300;
-    }
-    #msg{
-        margin-top:15px;
-        min-height:40px;
-        color:#aaa;
-        font-size:14px;
-    }
+body{
+    background:#000;
+    color:#eee;
+    font-family:"Noto Serif KR",serif;
+    text-align:center;
+}
+#wrap{max-width:600px;margin:60px auto;}
+button{
+    width:100%;
+    padding:14px;
+    margin:10px 0;
+    background:#111;
+    color:#eee;
+    border:1px solid #444;
+    font-size:16px;
+    cursor:pointer;
+}
+button:hover{background:#222;}
+#barWrap{
+    width:100%;
+    height:22px;
+    border:1px solid #555;
+    margin-top:20px;
+}
+#bar{
+    height:100%;
+    width:100%;
+    background:#b00;
+    transition:width 0.1s linear;
+}
 </style>
 </head>
+
 <body>
+<div id="wrap">
+    <h2>숨을 죽여라</h2>
+    <p id="msg">시작을 눌러야 소리가 난다</p>
 
-<div id="game">
-    <h2>숨을 참아라</h2>
-    <p>소리가 날 때는 숨을 쉬면 안 된다</p>
+    <button id="startBtn">시작</button>
+    <button id="holdBtn" disabled>숨 참기</button>
 
-    <div id="barWrap">
-        <div id="bar"></div>
-    </div>
-
-    <button id="holdBtn">숨 참기 (누르고 있기)</button>
-
-    <div id="msg"></div>
+    <div id="barWrap"><div id="bar"></div></div>
 </div>
 
 <script>
 /* ================== 오디오 ================== */
-const leaves = new Audio("fallenleaves.mp3");
-const scream = new Audio("screm2.mp3");
-const hiddenBgm = new Audio("Symmetry.mp3");
+const leaves = new Audio("./fallenleaves.mp3");
+const scream = new Audio("./screm2.mp3");
+const bgm = new Audio("./sound/Symmetry.mp3");
 
-hiddenBgm.loop = true;
-hiddenBgm.volume = 0.4;
+leaves.loop = true;
+bgm.loop = true;
 
-/* ================== 상태 ================== */
-let gauge = 100;
-let holding = false;
-let soundPlaying = false;
-let alive = true;
-let surviveTime = 35; // 버텨야 하는 시간(초)
+leaves.volume = 0.9;
+scream.volume = 0.9;
+bgm.volume = 0.3; // 👈 여기서만 BGM 작게
 
-const bar = document.getElementById("bar");
-const msg = document.getElementById("msg");
-const btn = document.getElementById("holdBtn");
+let audioUnlocked = false;
 
-/* ================== 버튼 ================== */
-btn.addEventListener("mousedown", ()=> holding=true);
-btn.addEventListener("mouseup", ()=> holding=false);
-btn.addEventListener("mouseleave", ()=> holding=false);
-
-/* ================== 게이지 처리 ================== */
-setInterval(()=>{
-    if(!alive) return;
-
-    if(holding){
-        gauge -= 10; // 숨 참기 감소
-    }else{
-        if(soundPlaying){
-            death("소리 위로 숨소리가 겹쳤다");
-            return;
-        }
-        gauge += 5; // 회복
-    }
-
-    if(gauge <= 0){
-        death("더 이상 숨을 참을 수 없었다");
-        return;
-    }
-
-    if(gauge > 100) gauge = 100;
-    bar.style.width = gauge + "%";
-}, 200);
-
-/* ================== 소리 이벤트 ================== */
-function playSound(){
-    soundPlaying = true;
-
-    // 20% 확률 가짜 비명
-    if(Math.random() < 0.2){
-        scream.currentTime = 0;
-        scream.play();
-    }else{
+/* 🔓 오디오 언락 (가장 중요) */
+function unlockAudio(){
+    if(audioUnlocked) return;
+    leaves.play().then(()=>{
+        leaves.pause();
         leaves.currentTime = 0;
-        leaves.play();
-    }
-
-    msg.innerText = "…가까워진다";
-
-    // 소리 길이
-    setTimeout(()=>{
-        soundPlaying = false;
-        msg.innerText = "지금은 괜찮다";
-    }, 2000 + Math.random()*1000);
+    }).catch(()=>{});
+    bgm.play().then(()=>{
+        bgm.pause();
+        bgm.currentTime = 0;
+    }).catch(()=>{});
+    audioUnlocked = true;
 }
 
-// 랜덤 소리 반복
-const soundLoop = setInterval(()=>{
-    if(!alive) return;
-    playSound();
-}, 3500 + Math.random()*2000);
+/* ================== 게임 로직 ================== */
+let holding = false;
+let gauge = 100;
+let gameLoop = null;
 
-/* ================== 생존 타이머 ================== */
-const timer = setInterval(()=>{
-    if(!alive) return;
-    surviveTime--;
-    if(surviveTime <= 0){
-        clearInterval(soundLoop);
-        success();
-    }
-},1000);
+/* 시작 버튼 */
+document.getElementById("startBtn").onclick = ()=>{
+    unlockAudio();          // 🔥 필수
+    bgm.play();             // 히든 엔딩 BGM 테스트
+    leaves.play();          // 낙엽 소리
+    document.getElementById("msg").innerText = "소리가 나면 숨을 참아라";
+    document.getElementById("holdBtn").disabled = false;
+    startLoop();
+};
 
-/* ================== 결과 ================== */
-function death(reason){
-    alive = false;
-    msg.innerText = "사망: " + reason;
-}
+/* 숨 참기 */
+const holdBtn = document.getElementById("holdBtn");
+holdBtn.addEventListener("mousedown", ()=>{
+    holding = true;
+});
+holdBtn.addEventListener("mouseup", ()=>{
+    holding = false;
+});
+holdBtn.addEventListener("mouseleave", ()=>{
+    holding = false;
+});
 
-function success(){
-    alive = false;
-    msg.innerText = "…끝내 아무도 찾지 못했다";
-    hiddenBgm.play();
+/* 게이지 루프 */
+function startLoop(){
+    gameLoop = setInterval(()=>{
+        if(holding){
+            gauge -= 0.8;
+        }else{
+            gauge += 0.6;
+        }
+
+        gauge = Math.max(0, Math.min(100, gauge));
+        document.getElementById("bar").style.width = gauge + "%";
+
+        // 실패
+        if(gauge <= 0){
+            clearInterval(gameLoop);
+            leaves.pause();
+            scream.currentTime = 0;
+            scream.play();
+            document.getElementById("msg").innerText = "숨을 참지 못했다";
+        }
+    },50);
 }
 </script>
-
 </body>
 </html>
