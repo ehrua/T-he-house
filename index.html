@@ -2,41 +2,34 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>히든 엔딩 테스트</title>
+<title>탈출</title>
 <style>
 body{
-    background:#000;
-    color:#eee;
-    font-family:"Noto Serif KR",serif;
+background:#000;
+color:#eee;
+font-family:"Noto Serif KR",serif;
+line-height:1.7;
 }
-#game{
-    max-width:700px;
-    margin:40px auto;
-}
+#game{max-width:820px;margin:40px auto;padding:20px;}
+.part{border-top:2px solid #333;margin-top:30px;padding-top:20px;}
 button{
-    width:100%;
-    padding:14px;
-    margin-top:10px;
-    background:#111;
-    color:#eee;
-    border:1px solid #444;
-    cursor:pointer;
+width:100%;padding:12px;margin:8px 0;
+background:#111;color:#eee;border:1px solid #444;cursor:pointer;
 }
-button:active{
-    background:#333;
+button:hover{background:#222;}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.display{
+background:#111;
+padding:12px;
+margin-bottom:10px;
+text-align:center;
+letter-spacing:6px;
+font-size:20px;
 }
-.bar{
-    width:100%;
-    height:20px;
-    background:#222;
-    margin-top:15px;
-}
-.fill{
-    height:100%;
-    background:#aaa;
-    width:100%;
-    transition:width 0.2s linear;
-}
+.memo{color:#aaa;font-style:italic;}
+h2{margin-top:0;}
+.bar{width:100%;height:20px;background:#222;margin:15px 0;}
+.fill{height:100%;background:#aaa;width:100%;transition:width .2s linear;}
 </style>
 </head>
 
@@ -44,149 +37,284 @@ button:active{
 <div id="game"></div>
 
 <script>
-/* ===== 사운드 ===== */
-const bgm = new Audio("./sound/TheDread.mp3");
-const phoneSfx = new Audio("./sound/phone.mp3");
-const leavesSfx = new Audio("./sound/fallenleaves.mp3");
-const screamSfx = new Audio("./sound/screm2.mp3");
+/* ================== 사운드 ================== */
+const bgm=new Audio("./sound/TheDread.mp3");
+const chaseBgm=new Audio("./sound/Anxiety.mp3");
+const hiddenBgm=new Audio("./sound/Symmetry.mp3");
+const phoneKeySfx=new Audio("./sound/phone.mp3");
+const phoneConnectSfx=new Audio("./sound/connect.mp3");
+const leavesSfx=new Audio("./sound/fallenleaves.mp3");
+const screamSfx=new Audio("./sound/screm2.mp3");
 
-bgm.loop = true;
-bgm.volume = 0.2;
+bgm.loop=chaseBgm.loop=hiddenBgm.loop=true;
+bgm.volume=.7; chaseBgm.volume=.6; hiddenBgm.volume=.7;
 
-/* ===== 상태 ===== */
-let holding = false;
-let breath = 100;
-let survived = 0;
-let screamTimer = null;
-let leavesTimeout = null;
-let leavesPlaying = false;
-
-/* ===== 렌더 ===== */
-const game = document.getElementById("game");
-function render(html){
-    game.innerHTML = html;
+let audioUnlocked=false;
+function unlockAudio(){
+if(audioUnlocked) return;
+bgm.play().catch(()=>{});
+audioUnlocked=true;
+}
+function playChase(){bgm.pause(); chaseBgm.currentTime=0; chaseBgm.play().catch(()=>{});}
+function stopChase(){chaseBgm.pause(); bgm.play().catch(()=>{});}
+function playHidden(){
+bgm.pause(); chaseBgm.pause();
+hiddenBgm.currentTime=0;
+hiddenBgm.play().catch(()=>{});
 }
 
-/* ===== 시작 ===== */
-render(`
-<h2>공중전화</h2>
-<p>수화기를 들었다.</p>
-<button id="call112">112를 누른다</button>
-`);
-
-document.getElementById("call112").onclick = () => {
-    bgm.play().catch(()=>{});
-    phoneSfx.currentTime = 0;
-    phoneSfx.play();
-    setTimeout(policeCall,3000);
+/* ================== 상태 ================== */
+const game=document.getElementById("game");
+const state={
+tweezers:false,basementKey:false,safeKey:false,frontKey:false,
+caught:0,deathReason:"",input:"",history:[],hunterTimer:null
 };
 
-/* ===== 통화 ===== */
-function policeCall(){
-    phoneSfx.pause();
-    phoneSfx.currentTime = 0;
+/* ================== 렌더 ================== */
+function render(html,options=[],back=false){
+clearTimeout(state.hunterTimer);
+game.innerHTML=html;
 
-    render(`
-<p>뚜…</p>
-<p>경찰: 판태현 씨죠?</p>
-<p>태현: 네? 제 이름을 어떻게…</p>
-<p>경찰: 지금 당장 출동하겠습니다.</p>
-<button id="hide">전화를 끊고 숨는다</button>
-`);
-    document.getElementById("hide").onclick = startMiniGame;
+if(Math.random()<0.3){
+state.hunterTimer=setTimeout(()=>{
+state.deathReason="기척이 바로 뒤에서 멈췄다.";
+playChase(); death();
+},12000+Math.random()*10000);
 }
 
-/* ===== 미니게임 ===== */
-function startMiniGame(){
-    breath = 100;
-    survived = 0;
+if(back&&state.history.length){
+const b=document.createElement("button");
+b.innerText="뒤로 가기";
+b.onclick=()=>state.history.pop()();
+game.appendChild(b);
+}
 
-    render(`
-<h2>숨을 참아라</h2>
-<p>소리가 나면 들킬 것이다.</p>
+options.forEach(o=>{
+const btn=document.createElement("button");
+btn.innerText=o.text;
+btn.onclick=()=>{
+unlockAudio();
+state.history.push(()=>render(html,options,back));
+o.action();
+};
+game.appendChild(btn);
+});
+}
 
-<div class="bar">
-    <div class="fill" id="breathBar"></div>
+/* ================== 랜덤 납치 ================== */
+function randomHunter(next){
+if(Math.random()<0.2){
+state.caught++;
+state.deathReason="숨을 고르는 순간, 기척이 겹쳤다.";
+playChase();
+state.caught===1?basementCaptured():death();
+}else next();
+}
+
+/* ================== PART 0 ================== */
+function part0(){
+render(`
+<div class="part">
+<h2>PART 0 : 새벽의 공원</h2>
+<p>퍽.<br>뒤통수에 둔탁한 충격.</p>
 </div>
+`,[{text:"눈을 뜬다",action:room}]);
+}
 
+/* ================== 방 ================== */
+function room(){
+stopChase();
+render(`
+<div class="part">
+<h2>방</h2>
+<p>신문지로 막힌 창문. 잠긴 문.</p>
+</div>
+`,[
+{text:"문",action:door},
+{text:"방 조사",action:searchRoom},
+{text:"가만히",action:wait}
+]);
+}
+
+function searchRoom(){
+render(`<p>장기 매매 기록… 이름: 판태현</p>`,[
+{text:"서랍",action:()=>{state.tweezers=true; render(`<p>핀셋을 얻었다.</p>`,[{text:"문",action:door}]);}},
+{text:"침대 밑",action:()=>randomHunter(room)}
+],true);
+}
+
+function door(){
+if(!state.tweezers){
+render(`<p>문이 잠겨 있다.</p>`,[{text:"뒤로",action:room}]);
+return;
+}
+render(`<p>문이 열린다.</p>`,[{text:"밖으로",action:secondFloor}]);
+}
+
+function wait(){
+state.caught++; state.deathReason="아무것도 하지 않는 선택.";
+playChase(); state.caught===1?basementCaptured():death();
+}
+
+/* ================== 2층 ================== */
+function secondFloor(){
+stopChase();
+render(`<div class="part"><h2>2층</h2></div>`,[
+{text:"서재",action:()=>randomHunter(library)},
+{text:"계단",action:kitchen}
+]);
+}
+
+function library(){
+render(`
+<div class="part"><h2>서재</h2><p>사진과 해부학 책.</p></div>
+`,[
+{text:"메모",action:()=>render(`<p class="memo">TV의 숫자를 기억해라. 3849</p>`,[{text:"뒤로",action:library}])},
+{text:"서랍",action:()=>{state.basementKey=true; render(`<p>지하실 열쇠 획득.</p>`,[{text:"뒤로",action:library}]);}},
+{text:"나간다",action:()=>randomHunter(secondFloor)}
+],true);
+}
+
+/* ================== 주방 ================== */
+function kitchen(){
+render(`<div class="part"><h2>주방</h2></div>`,[
+{text:"거실",action:()=>randomHunter(livingroom)}
+]);
+}
+
+/* ================== 거실 ================== */
+function livingroom(){
+stopChase();
+render(`<div class="part"><h2>거실</h2></div>`,[
+{text:"TV",action:()=>render(`<p>TV에 3849가 반복된다.</p>`,[{text:"뒤로",action:livingroom}])},
+{text:"서랍",action:()=>{state.safeKey=true; render(`<p>금고 열쇠 획득.</p>`,[{text:"뒤로",action:livingroom}]);}},
+{text:"지하실",action:basement},
+{text:"현관",action:frontDoor}
+]);
+}
+
+/* ================== 지하실 ================== */
+function basement(){
+if(!state.basementKey){
+render(`<p>잠겨 있다.</p>`,[{text:"뒤로",action:livingroom}]);
+return;
+}
+render(`<div class="part"><h2>지하실</h2></div>`,[
+{text:"금고",action:()=>{
+if(!state.safeKey){render(`<p>잠겨 있다.</p>`,[{text:"뒤로",action:basement}]);return;}
+state.frontKey=true;
+render(`<p>현관 열쇠다.</p>`,[{text:"뒤로",action:basement}]);
+}},
+{text:"나간다",action:()=>randomHunter(livingroom)}
+]);
+}
+
+function basementCaptured(){
+render(`<div class="part"><h2>지하실</h2><p>끌려왔다.</p></div>`,
+[{text:"버틴다",action:secondFloor}]);
+}
+
+/* ================== 현관 ================== */
+function frontDoor(){
+state.input="";
+drawKeypad("현관 도어락",checkDoor);
+}
+
+function drawKeypad(title,callback){
+render(`<h2>${title}</h2><div class="display">${state.input}</div><div class="keypad" id="pad"></div>`,[],true);
+const pad=document.getElementById("pad");
+[1,2,3,4,5,6,7,8,9,0].forEach(n=>{
+const b=document.createElement("button");
+b.innerText=n;
+b.onclick=()=>{state.input+=n; drawKeypad(title,callback);};
+pad.appendChild(b);
+});
+const ok=document.createElement("button");
+ok.innerText="확인";
+ok.onclick=callback;
+pad.appendChild(ok);
+}
+
+function checkDoor(){
+if(!state.frontKey){state.deathReason="문이 열리지 않는다."; death(); return;}
+if(state.input==="3849") outside();
+else{state.deathReason="경보음이 울렸다."; playChase(); death();}
+}
+
+/* ================== 바깥 ================== */
+function outside(){
+stopChase();
+render(`
+<div class="part">
+<h2>밖</h2>
+<p>골목 끝, 공중전화.</p>
+</div>
+`,[{text:"공중전화",action:payphone}]);
+}
+
+/* ================== 공중전화 + 미니게임 ================== */
+function payphone(){
+state.input="";
+drawKeypad("공중전화",callPhone);
+}
+
+function callPhone(){
+phoneConnectSfx.play();
+setTimeout(()=>{
+if(state.input==="112") startMiniGame();
+else if(state.input==="3849"){playHidden(); render(`<h2>히든 엔딩 : 거래</h2>`);}
+else{state.deathReason="신호가 끊겼다."; death();}
+},2000);
+}
+
+/* ================== 숨 참기 ================== */
+let holding=false,breath=100,survived=0,leavesTimer,screamTimer;
+function startMiniGame(){
+playHidden();
+render(`
+<h2>숨을 참아라</h2>
+<p>소리가 나면 끝이다.</p>
+<div class="bar"><div class="fill" id="breathBar"></div></div>
 <button id="holdBtn">숨 참기</button>
 `);
+const btn=document.getElementById("holdBtn");
+btn.onmousedown=()=>holding=true;
+btn.onmouseup=btn.onmouseleave=()=>holding=false;
 
-    const btn = document.getElementById("holdBtn");
+leavesTimer=setInterval(()=>{
+if(leavesSfx.paused){
+leavesSfx.volume=Math.random()<.2?1:.6;
+leavesSfx.currentTime=0; leavesSfx.play();
+}},7000+Math.random()*5000);
 
-    btn.onmousedown = ()=>holding=true;
-    btn.onmouseup = ()=>holding=false;
-    btn.onmouseleave = ()=>holding=false;
-    btn.ontouchstart = (e)=>{ e.preventDefault(); holding=true; };
-    btn.ontouchend = ()=>holding=false;
+screamTimer=setInterval(()=>{
+screamSfx.currentTime=0; screamSfx.play();
+},20000);
 
-    /* ===== 발소리(낙엽) 로직 ===== */
-    function playLeavesOnce(){
-        if(leavesPlaying) return;
-        leavesPlaying = true;
+const loop=setInterval(()=>{
+if(holding){breath-=2; survived++;}
+else breath+=1;
+breath=Math.max(0,Math.min(100,breath));
+document.getElementById("breathBar").style.width=breath+"%";
 
-        // 가끔 크게 (15%)
-        leavesSfx.volume = Math.random() < 0.15 ? 1.0 : 0.5;
-        leavesSfx.currentTime = 0;
-        leavesSfx.play();
-
-        // 3초만 재생
-        setTimeout(()=>{
-            leavesSfx.pause();
-            leavesSfx.currentTime = 0;
-            leavesPlaying = false;
-
-            // 다음 발소리까지 긴 무음 (12~22초)
-            const next = Math.random()*10000 + 12000;
-            leavesTimeout = setTimeout(playLeavesOnce, next);
-        }, 3000);
-    }
-
-    // 최초 접근은 8초 후
-    leavesTimeout = setTimeout(playLeavesOnce, 8000);
-
-    /* ===== 비명 ===== */
-    screamTimer = setInterval(()=>{
-        screamSfx.currentTime = 0;
-        screamSfx.play();
-    }, 20000);
-
-    gameLoop();
+if(breath<=0){clearAll(loop); render(`<h2>사망</h2><p>숨이 새어 나갔다.</p>`);}
+if(survived>=60){clearAll(loop); render(`<h2>히든 엔딩 : 사이렌</h2><p>멀리서 사이렌.</p>`);}
+},200);
 }
 
-/* ===== 게임 루프 ===== */
-function gameLoop(){
-    const bar = document.getElementById("breathBar");
-
-    const loop = setInterval(()=>{
-        if(holding){
-            breath -= 2;
-            survived += 1;
-        }else{
-            breath += 1;
-        }
-
-        breath = Math.max(0,Math.min(100,breath));
-        bar.style.width = breath + "%";
-
-        if(breath <= 0){
-            clearAll(loop);
-            render("<h2>사망</h2><p>숨을 참지 못했다.</p>");
-        }
-
-        if(survived >= 60){
-            clearAll(loop);
-            render("<h2>히든 엔딩</h2><p>멀리서 사이렌이 들린다.</p>");
-        }
-    },200);
-}
-
-/* ===== 정리 ===== */
 function clearAll(loop){
-    clearInterval(loop);
-    clearInterval(screamTimer);
-    clearTimeout(leavesTimeout);
+clearInterval(loop);
+clearInterval(leavesTimer);
+clearInterval(screamTimer);
 }
+
+/* ================== 사망 ================== */
+function death(){
+clearTimeout(state.hunterTimer);
+render(`<h2>사망</h2><p>${state.deathReason}</p>`);
+}
+
+part0();
 </script>
 </body>
 </html>
