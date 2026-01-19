@@ -38,14 +38,17 @@ h2{margin-top:0;}
 /* ================== 사운드 ================== */
 const bgm = new Audio("./sound/TheDread.mp3");
 const chaseBgm = new Audio("./sound/Anxiety.mp3");
-const phoneKeySfx = new Audio("./sound/phone.mp3");   // 번호 누를 때
-const phoneConnectSfx = new Audio("./sound/connect.mp3"); // 🔔 통화 연결음
+const hiddenBgm = new Audio("./sound/Symmetry.mp3"); // 🔔 히든 엔딩 전용
+const phoneKeySfx = new Audio("./sound/phone.mp3");
+const phoneConnectSfx = new Audio("./sound/connect.mp3");
 
 bgm.loop = true;
 chaseBgm.loop = true;
+hiddenBgm.loop = true;
 
 bgm.volume = 0.7;
 chaseBgm.volume = 0.6;
+hiddenBgm.volume = 0.7;
 phoneKeySfx.volume = 0.9;
 phoneConnectSfx.volume = 0.9;
 
@@ -64,6 +67,12 @@ function playChase(){
 function stopChase(){
   chaseBgm.pause();
   bgm.play().catch(()=>{});
+}
+function playHidden(){
+  bgm.pause();
+  chaseBgm.pause();
+  hiddenBgm.currentTime=0;
+  hiddenBgm.play().catch(()=>{});
 }
 
 /* ================== 상태 ================== */
@@ -395,6 +404,7 @@ phoneConnectSfx.play();
 
 setTimeout(()=>{
   if(state.input==="112"){
+    playHidden();
     render(`<h2>히든 엔딩 : 사이렌</h2>`);
   }
   else if(state.input==="3849"){
