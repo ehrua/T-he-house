@@ -2,79 +2,191 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>공중전화 괴담</title>
+<title>히든 엔딩 테스트</title>
 <style>
-body {
-    background:black;
-    color:#e0e0e0;
-    font-family:'Malgun Gothic', sans-serif;
-    text-align:center;
+body{
+    background:#000;
+    color:#eee;
+    font-family:"Noto Serif KR",serif;
 }
-#status {
-    margin-top:20px;
-    opacity:0.8;
+#game{
+    max-width:700px;
+    margin:40px auto;
 }
-button {
-    margin-top:20px;
-    padding:10px 20px;
+button{
+    width:100%;
+    padding:14px;
+    margin-top:10px;
+    background:#111;
+    color:#eee;
+    border:1px solid #444;
+    cursor:pointer;
+}
+button:active{
+    background:#333;
+}
+.bar{
+    width:100%;
+    height:20px;
+    background:#222;
+    margin-top:15px;
+}
+.fill{
+    height:100%;
+    background:#aaa;
+    width:100%;
+    transition:width 0.2s linear;
 }
 </style>
 </head>
+
 <body>
-
-<h2>📞 공중전화</h2>
-<p>전화가 연결되는 동안, 주변을 잘 들어라.</p>
-
-<div id="status">…</div>
-<button onclick="holdBreath()">숨 참기</button>
-
-<audio id="footstep" src="footstep.mp3"></audio>
+<div id="game"></div>
 
 <script>
-const footstep = document.getElementById("footstep");
-const status = document.getElementById("status");
+/* ===== 사운드 ===== */
+const bgm = new Audio("./sound/TheDread.mp3");
+const phoneSfx = new Audio("./sound/phone.mp3");
+const leavesSfx = new Audio("./sound/fallenleaves.mp3");
+const screamSfx = new Audio("./sound/screm2.mp3");
 
-let footstepActive = false;
+bgm.loop = true;
+bgm.volume = 0.2;
 
-// 숨 참기 (플레이어 선택)
-function holdBreath(){
-    status.textContent = "숨을 참았다...";
-    setTimeout(() => status.textContent = "…", 2000);
+/* ===== 상태 ===== */
+let holding = false;
+let breath = 100;
+let survived = 0;
+let screamTimer = null;
+let leavesTimeout = null;
+let leavesPlaying = false;
+
+/* ===== 렌더 ===== */
+const game = document.getElementById("game");
+function render(html){
+    game.innerHTML = html;
 }
 
-// 발소리 이벤트
-function triggerFootstep(){
-    if(footstepActive) return;
+/* ===== 시작 ===== */
+render(`
+<h2>공중전화</h2>
+<p>수화기를 들었다.</p>
+<button id="call112">112를 누른다</button>
+`);
 
-    footstepActive = true;
+document.getElementById("call112").onclick = () => {
+    bgm.play().catch(()=>{});
+    phoneSfx.currentTime = 0;
+    phoneSfx.play();
+    setTimeout(policeCall,3000);
+};
 
-    // 가끔 크게 들리게
-    const loudChance = Math.random() < 0.15;
-    footstep.volume = loudChance ? 1.0 : 0.5;
+/* ===== 통화 ===== */
+function policeCall(){
+    phoneSfx.pause();
+    phoneSfx.currentTime = 0;
 
-    footstep.currentTime = 0;
-    footstep.play();
-
-    status.textContent = loudChance 
-        ? "발소리가 바로 뒤에서 들린다…" 
-        : "어디선가 발소리가 들린다…";
-
-    // 3초 후 완전 정지
-    setTimeout(() => {
-        footstep.pause();
-        footstep.currentTime = 0;
-        footstepActive = false;
-        status.textContent = "…";
-    }, 3000);
-
-    // 다음 발소리 예약 (15~25초 랜덤)
-    const nextDelay = Math.random() * 10000 + 15000;
-    setTimeout(triggerFootstep, nextDelay);
+    render(`
+<p>뚜…</p>
+<p>경찰: 판태현 씨죠?</p>
+<p>태현: 네? 제 이름을 어떻게…</p>
+<p>경찰: 지금 당장 출동하겠습니다.</p>
+<button id="hide">전화를 끊고 숨는다</button>
+`);
+    document.getElementById("hide").onclick = startMiniGame;
 }
 
-// 최초 발소리 시작 타이밍 (게임 시작 후 10초)
-setTimeout(triggerFootstep, 10000);
+/* ===== 미니게임 ===== */
+function startMiniGame(){
+    breath = 100;
+    survived = 0;
+
+    render(`
+<h2>숨을 참아라</h2>
+<p>소리가 나면 들킬 것이다.</p>
+
+<div class="bar">
+    <div class="fill" id="breathBar"></div>
+</div>
+
+<button id="holdBtn">숨 참기</button>
+`);
+
+    const btn = document.getElementById("holdBtn");
+
+    btn.onmousedown = ()=>holding=true;
+    btn.onmouseup = ()=>holding=false;
+    btn.onmouseleave = ()=>holding=false;
+    btn.ontouchstart = (e)=>{ e.preventDefault(); holding=true; };
+    btn.ontouchend = ()=>holding=false;
+
+    /* ===== 발소리(낙엽) 로직 ===== */
+    function playLeavesOnce(){
+        if(leavesPlaying) return;
+        leavesPlaying = true;
+
+        // 가끔 크게 (15%)
+        leavesSfx.volume = Math.random() < 0.15 ? 1.0 : 0.5;
+        leavesSfx.currentTime = 0;
+        leavesSfx.play();
+
+        // 3초만 재생
+        setTimeout(()=>{
+            leavesSfx.pause();
+            leavesSfx.currentTime = 0;
+            leavesPlaying = false;
+
+            // 다음 발소리까지 긴 무음 (12~22초)
+            const next = Math.random()*10000 + 12000;
+            leavesTimeout = setTimeout(playLeavesOnce, next);
+        }, 3000);
+    }
+
+    // 최초 접근은 8초 후
+    leavesTimeout = setTimeout(playLeavesOnce, 8000);
+
+    /* ===== 비명 ===== */
+    screamTimer = setInterval(()=>{
+        screamSfx.currentTime = 0;
+        screamSfx.play();
+    }, 20000);
+
+    gameLoop();
+}
+
+/* ===== 게임 루프 ===== */
+function gameLoop(){
+    const bar = document.getElementById("breathBar");
+
+    const loop = setInterval(()=>{
+        if(holding){
+            breath -= 2;
+            survived += 1;
+        }else{
+            breath += 1;
+        }
+
+        breath = Math.max(0,Math.min(100,breath));
+        bar.style.width = breath + "%";
+
+        if(breath <= 0){
+            clearAll(loop);
+            render("<h2>사망</h2><p>숨을 참지 못했다.</p>");
+        }
+
+        if(survived >= 60){
+            clearAll(loop);
+            render("<h2>히든 엔딩</h2><p>멀리서 사이렌이 들린다.</p>");
+        }
+    },200);
+}
+
+/* ===== 정리 ===== */
+function clearAll(loop){
+    clearInterval(loop);
+    clearInterval(screamTimer);
+    clearTimeout(leavesTimeout);
+}
 </script>
-
 </body>
 </html>
