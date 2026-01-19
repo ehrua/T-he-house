@@ -10,7 +10,10 @@ body{
     font-family:"Noto Serif KR",serif;
     text-align:center;
 }
-#wrap{max-width:600px;margin:60px auto;}
+#wrap{
+    max-width:600px;
+    margin:60px auto;
+}
 button{
     width:100%;
     padding:14px;
@@ -32,7 +35,7 @@ button:hover{background:#222;}
     height:100%;
     width:100%;
     background:#b00;
-    transition:width 0.1s linear;
+    transition:width 0.08s linear;
 }
 </style>
 </head>
@@ -40,7 +43,7 @@ button:hover{background:#222;}
 <body>
 <div id="wrap">
     <h2>숨을 죽여라</h2>
-    <p id="msg">시작을 눌러야 소리가 난다</p>
+    <p id="msg">시작을 눌러야 소리가 들린다</p>
 
     <button id="startBtn">시작</button>
     <button id="holdBtn" disabled>숨 참기</button>
@@ -50,8 +53,8 @@ button:hover{background:#222;}
 
 <script>
 /* ================== 오디오 ================== */
-const leaves = new Audio("./fallenleaves.mp3"); // ✅ 수정
-const scream = new Audio("./screm2.mp3");        // ✅ 수정
+const leaves = new Audio("./fallenleaves.mp3"); // ✅ 확인
+const scream = new Audio("./screm2.mp3");       // ✅ 확인
 const bgm = new Audio("./sound/Symmetry.mp3");
 
 leaves.loop = true;
@@ -59,34 +62,31 @@ bgm.loop = true;
 
 leaves.volume = 0.9;
 scream.volume = 1.0;
-bgm.volume = 0.3; // 이 구간에서만 BGM 작게
+bgm.volume = 0.3; // 이 구간만 BGM 작게
 
 let audioUnlocked = false;
 
-/* 🔓 브라우저 오디오 언락 */
+/* 🔓 브라우저 자동재생 차단 해제 */
 function unlockAudio(){
     if(audioUnlocked) return;
 
-    leaves.play().then(()=>{
-        leaves.pause();
-        leaves.currentTime = 0;
-    }).catch(()=>{});
-
-    bgm.play().then(()=>{
-        bgm.pause();
-        bgm.currentTime = 0;
-    }).catch(()=>{});
+    [leaves, scream, bgm].forEach(a=>{
+        a.play().then(()=>{
+            a.pause();
+            a.currentTime = 0;
+        }).catch(()=>{});
+    });
 
     audioUnlocked = true;
 }
 
-/* ================== 게임 ================== */
+/* ================== 게임 로직 ================== */
 let holding = false;
 let gauge = 100;
 let loop = null;
 
 document.getElementById("startBtn").onclick = ()=>{
-    unlockAudio();          // 🔥 필수
+    unlockAudio();      // 🔥 이게 없으면 소리 안 남
     bgm.play();
     leaves.play();
 
@@ -105,7 +105,7 @@ holdBtn.onmouseleave = ()=>holding = false;
 function startLoop(){
     loop = setInterval(()=>{
         if(holding){
-            gauge -= 0.8;
+            gauge -= 0.9;
         }else{
             gauge += 0.6;
         }
