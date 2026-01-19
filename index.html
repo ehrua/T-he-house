@@ -2,181 +2,169 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>히든 엔딩 테스트</title>
+<title>숨 참기 테스트</title>
 <style>
-body{
-  background:#000;
-  color:#eee;
-  font-family:"Noto Serif KR",serif;
-}
-#game{
-  max-width:600px;
-  margin:40px auto;
-  text-align:center;
-}
-button{
-  background:#111;
-  border:1px solid #444;
-  color:#eee;
-  padding:10px 16px;
-  cursor:pointer;
-}
-button:hover{background:#222;}
-.dir-pad{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  grid-template-rows:repeat(3,80px);
-  gap:10px;
-  margin-top:30px;
-}
-.empty{pointer-events:none;}
+    body{
+        background:#000;
+        color:#eee;
+        font-family:"Noto Serif KR",serif;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        height:100vh;
+        margin:0;
+    }
+    #game{
+        width:420px;
+        text-align:center;
+    }
+    h2{margin-bottom:10px;}
+    #barWrap{
+        width:100%;
+        height:24px;
+        background:#222;
+        border:1px solid #555;
+        margin:20px 0;
+    }
+    #bar{
+        height:100%;
+        width:100%;
+        background:#7a0000;
+        transition:width 0.1s linear;
+    }
+    button{
+        width:100%;
+        padding:14px;
+        font-size:18px;
+        background:#111;
+        color:#eee;
+        border:1px solid #444;
+        cursor:pointer;
+    }
+    button:active{
+        background:#300;
+    }
+    #msg{
+        margin-top:15px;
+        min-height:40px;
+        color:#aaa;
+        font-size:14px;
+    }
 </style>
 </head>
-
 <body>
-<div id="game"></div>
+
+<div id="game">
+    <h2>숨을 참아라</h2>
+    <p>소리가 날 때는 숨을 쉬면 안 된다</p>
+
+    <div id="barWrap">
+        <div id="bar"></div>
+    </div>
+
+    <button id="holdBtn">숨 참기 (누르고 있기)</button>
+
+    <div id="msg"></div>
+</div>
 
 <script>
-/* ================= 오디오 ================= */
-let ctx;
-let buffers = {};
+/* ================== 오디오 ================== */
+const leaves = new Audio("fallenleaves.mp3");
+const scream = new Audio("screm2.mp3");
+const hiddenBgm = new Audio("Symmetry.mp3");
 
-const bgm = new Audio("sound/Symmetry.mp3");
-bgm.loop = true;
-bgm.volume = 0.7;
+hiddenBgm.loop = true;
+hiddenBgm.volume = 0.4;
 
-const phone = new Audio("sound/phone.mp3");
+/* ================== 상태 ================== */
+let gauge = 100;
+let holding = false;
+let soundPlaying = false;
+let alive = true;
+let surviveTime = 35; // 버텨야 하는 시간(초)
 
-async function initAudio(){
-  if(!ctx){
-    ctx = new (window.AudioContext||window.webkitAudioContext)();
-    await load("fallenleaves.mp3");
-    await load("screm2.mp3");
-  }
-  if(ctx.state==="suspended") await ctx.resume();
-}
+const bar = document.getElementById("bar");
+const msg = document.getElementById("msg");
+const btn = document.getElementById("holdBtn");
 
-async function load(file){
-  const res = await fetch("sound/"+file);
-  const arr = await res.arrayBuffer();
-  buffers[file] = await ctx.decodeAudioData(arr);
-}
+/* ================== 버튼 ================== */
+btn.addEventListener("mousedown", ()=> holding=true);
+btn.addEventListener("mouseup", ()=> holding=false);
+btn.addEventListener("mouseleave", ()=> holding=false);
 
-function playDir(name,dir){
-  const src = ctx.createBufferSource();
-  const pan = ctx.createStereoPanner();
-  const gain = ctx.createGain();
+/* ================== 게이지 처리 ================== */
+setInterval(()=>{
+    if(!alive) return;
 
-  src.buffer = buffers[name];
+    if(holding){
+        gauge -= 10; // 숨 참기 감소
+    }else{
+        if(soundPlaying){
+            death("소리 위로 숨소리가 겹쳤다");
+            return;
+        }
+        gauge += 5; // 회복
+    }
 
-  if(dir==="LEFT") pan.pan.value = -1;
-  if(dir==="RIGHT") pan.pan.value = 1;
-  if(dir==="UP"){ pan.pan.value = 0; gain.gain.value = 0.6; }
-  if(dir==="DOWN"){ pan.pan.value = 0; gain.gain.value = 1; }
+    if(gauge <= 0){
+        death("더 이상 숨을 참을 수 없었다");
+        return;
+    }
 
-  src.connect(pan).connect(gain).connect(ctx.destination);
-  src.start();
-}
+    if(gauge > 100) gauge = 100;
+    bar.style.width = gauge + "%";
+}, 200);
 
-/* ================= 상태 ================= */
-const game = document.getElementById("game");
-let correctDir = "";
-let surviveTimer, roundTimer;
+/* ================== 소리 이벤트 ================== */
+function playSound(){
+    soundPlaying = true;
 
-/* ================= 렌더 ================= */
-function render(html){ game.innerHTML = html; }
+    // 20% 확률 가짜 비명
+    if(Math.random() < 0.2){
+        scream.currentTime = 0;
+        scream.play();
+    }else{
+        leaves.currentTime = 0;
+        leaves.play();
+    }
 
-/* ================= 시작 ================= */
-render(`
-  <h2>공중전화</h2>
-  <button onclick="call()">112를 누른다</button>
-`);
+    msg.innerText = "…가까워진다";
 
-async function call(){
-  await initAudio();
-  phone.currentTime = 0;
-  phone.play();
-
-  setTimeout(()=>{
-    phone.pause();
-    bgm.play();
-    policeCall();
-  },3000);
-}
-
-function policeCall(){
-  render(`
-    <p>경찰: 판태현 씨죠?</p>
-    <p>태현: 네… 맞는데요.</p>
-    <p>경찰: 지금 당장 출동하겠습니다.</p>
-    <button onclick="startMinigame()">바위 뒤에 숨는다</button>
-  `);
-}
-
-/* ================= 미니게임 ================= */
-function startMinigame(){
-  bgm.volume = 0.25; // ★ 여기서만 BGM 줄임
-
-  surviveTimer = setTimeout(()=>{
-    death("사이렌과 함께 나타난 경찰은 처음부터 한패였다.");
-  },60000);
-
-  nextRound();
-}
-
-function nextRound(){
-  clearTimeout(roundTimer);
-
-  const dirs=["UP","DOWN","LEFT","RIGHT"];
-  correctDir = dirs[Math.floor(Math.random()*4)];
-
-  playDir("fallenleaves.mp3",correctDir);
-
-  if(Math.random()<0.6){
+    // 소리 길이
     setTimeout(()=>{
-      playDir("screm2.mp3",dirs[Math.floor(Math.random()*4)]);
-    },500);
-  }
-
-  render(`
-    <h2>숨는다</h2>
-    <p>소리가 나는 방향을 클릭하라</p>
-    <div class="dir-pad">
-      <div class="empty"></div>
-      <button onclick="check('UP')">↑</button>
-      <div class="empty"></div>
-
-      <button onclick="check('LEFT')">←</button>
-      <div class="empty"></div>
-      <button onclick="check('RIGHT')">→</button>
-
-      <div class="empty"></div>
-      <button onclick="check('DOWN')">↓</button>
-      <div class="empty"></div>
-    </div>
-  `);
-
-  roundTimer = setTimeout(()=>{
-    death("낙엽이 바로 등 뒤에서 밟혔다.");
-  },5000);
+        soundPlaying = false;
+        msg.innerText = "지금은 괜찮다";
+    }, 2000 + Math.random()*1000);
 }
 
-function check(dir){
-  clearTimeout(roundTimer);
-  if(dir!==correctDir){
-    death("비명을 따라 움직인 순간 숨결이 겹쳤다.");
-    return;
-  }
-  setTimeout(nextRound,700);
+// 랜덤 소리 반복
+const soundLoop = setInterval(()=>{
+    if(!alive) return;
+    playSound();
+}, 3500 + Math.random()*2000);
+
+/* ================== 생존 타이머 ================== */
+const timer = setInterval(()=>{
+    if(!alive) return;
+    surviveTime--;
+    if(surviveTime <= 0){
+        clearInterval(soundLoop);
+        success();
+    }
+},1000);
+
+/* ================== 결과 ================== */
+function death(reason){
+    alive = false;
+    msg.innerText = "사망: " + reason;
 }
 
-/* ================= 사망 ================= */
-function death(text){
-  clearTimeout(surviveTimer);
-  bgm.pause();
-  bgm.volume = 0.7;
-  render(`<h2>사망</h2><p>${text}</p>`);
+function success(){
+    alive = false;
+    msg.innerText = "…끝내 아무도 찾지 못했다";
+    hiddenBgm.play();
 }
 </script>
+
 </body>
 </html>
