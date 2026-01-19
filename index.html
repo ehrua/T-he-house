@@ -8,24 +8,30 @@ body{
   background:#000;
   color:#eee;
   font-family:"Noto Serif KR",serif;
-  line-height:1.7;
 }
 #game{
-  max-width:720px;
+  max-width:600px;
   margin:40px auto;
-  padding:20px;
+  text-align:center;
 }
-button{
-  width:100%;
-  padding:14px;
-  margin:10px 0;
+.part{border-top:2px solid #333;padding-top:20px;}
+
+.dir-pad{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  grid-template-rows:repeat(3,80px);
+  gap:10px;
+  margin-top:30px;
+}
+.dir-pad button{
   background:#111;
-  color:#eee;
   border:1px solid #444;
+  color:#eee;
+  font-size:18px;
   cursor:pointer;
 }
-button:hover{background:#222;}
-.part{border-top:2px solid #333;padding-top:20px;}
+.dir-pad button:hover{background:#222;}
+.empty{pointer-events:none;}
 .memo{color:#aaa;font-style:italic;}
 </style>
 </head>
@@ -35,6 +41,8 @@ button:hover{background:#222;}
 
 <script>
 /* ================= 사운드 ================= */
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
 const hiddenBgm = new Audio("./sound/Symmetry.mp3");
 const phoneSfx = new Audio("./sound/phone.mp3");
 const leaves = new Audio("./sound/fallenleaves.mp3");
@@ -43,8 +51,6 @@ const scream = new Audio("./sound/screm2.mp3");
 hiddenBgm.loop = true;
 hiddenBgm.volume = 0.7;
 phoneSfx.volume = 0.9;
-leaves.volume = 0.8;
-scream.volume = 0.7;
 
 /* ================= 상태 ================= */
 const game = document.getElementById("game");
@@ -53,100 +59,101 @@ let surviveStart = 0;
 let surviveTimer = null;
 let roundTimer = null;
 
+/* ================= 유틸 ================= */
+function playDirectional(audio, dir){
+  const src = ctx.createMediaElementSource(audio);
+  const pan = ctx.createStereoPanner();
+  const gain = ctx.createGain();
+
+  if(dir === "LEFT") pan.pan.value = -1;
+  if(dir === "RIGHT") pan.pan.value = 1;
+  if(dir === "UP"){ pan.pan.value = 0; gain.gain.value = 0.7; }
+  if(dir === "DOWN"){ pan.pan.value = 0; gain.gain.value = 1; }
+
+  src.connect(pan).connect(gain).connect(ctx.destination);
+  audio.currentTime = 0;
+  audio.play();
+}
+
 /* ================= 렌더 ================= */
-function render(html, options=[]){
+function render(html){
   game.innerHTML = html;
-  options.forEach(o=>{
-    const b = document.createElement("button");
-    b.innerText = o.text;
-    b.onclick = o.action;
-    game.appendChild(b);
-  });
 }
 
 /* ================= 시작 ================= */
 render(`
   <div class="part">
     <h2>공중전화</h2>
-    <p>수화기를 들었다.</p>
+    <button onclick="call()">112를 누른다</button>
   </div>
-`,[
-  {text:"112를 누른다", action:call112},
-  {text:"3849를 누른다", action:call112}
-]);
+`);
 
-/* ================= 통화 ================= */
-function call112(){
-  phoneSfx.currentTime = 0;
+function call(){
   phoneSfx.play();
-
   setTimeout(()=>{
     phoneSfx.pause();
-    phoneSfx.currentTime = 0;
-    fakePoliceCall();
+    hiddenBgm.play();
+    fakePolice();
   },3000);
 }
 
-function fakePoliceCall(){
-  hiddenBgm.play();
-
+function fakePolice(){
   render(`
     <div class="part">
-      <p>뚜…</p>
-      <p><b>경찰:</b> 판태현 씨죠?</p>
-      <p><b>태현:</b> 네? 네… 맞는데요.</p>
-      <p><b>경찰:</b> 지금 당장 출동하겠습니다.</p>
-      <p class="memo">전화가 끊기지 않는다.</p>
+      <p>경찰: 판태현 씨죠?</p>
+      <p>태현: 네… 맞는데요.</p>
+      <p>경찰: 지금 당장 출동하겠습니다.</p>
+      <p class="memo">전화는 끊기지 않는다.</p>
+      <button onclick="startMinigame()">바위 뒤에 숨는다</button>
     </div>
-  `,[
-    {text:"바위 뒤에 숨는다", action:startMinigame}
-  ]);
+  `);
 }
 
 /* ================= 미니게임 ================= */
 function startMinigame(){
   surviveStart = Date.now();
-
   surviveTimer = setTimeout(()=>{
-    endDeath("사이렌과 함께 도착한 경찰은 처음부터 이 집의 일부였다.");
+    death("사이렌과 함께 도착한 경찰은 처음부터 한패였다.");
   },60000);
-
   nextRound();
 }
 
 function nextRound(){
   clearTimeout(roundTimer);
 
-  const dirs = ["북","남","동","서"];
+  const dirs = ["UP","DOWN","LEFT","RIGHT"];
   correctDir = dirs[Math.floor(Math.random()*4)];
 
-  // 진짜 낙엽 소리
-  leaves.currentTime = 0;
-  leaves.play();
+  playDirectional(leaves, correctDir);
 
-  // 가짜 비명 (확률)
-  if(Math.random() < 0.6){
+  if(Math.random()<0.6){
     setTimeout(()=>{
-      scream.currentTime = 0;
-      scream.play();
-    },300 + Math.random()*700);
+      playDirectional(scream, dirs[Math.floor(Math.random()*4)]);
+    },400);
   }
 
   render(`
     <div class="part">
       <h2>숨는다</h2>
-      <p>소리가 나는 방향을 선택하라.</p>
-      <p class="memo">비명은 거짓이다.</p>
+      <p>소리가 나는 방향을 선택하라</p>
+      <div class="dir-pad">
+        <div class="empty"></div>
+        <button onclick="check('UP')">↑</button>
+        <div class="empty"></div>
+
+        <button onclick="check('LEFT')">←</button>
+        <div class="empty"></div>
+        <button onclick="check('RIGHT')">→</button>
+
+        <div class="empty"></div>
+        <button onclick="check('DOWN')">↓</button>
+        <div class="empty"></div>
+      </div>
     </div>
-  `,[
-    {text:"북", action:()=>check("북")},
-    {text:"남", action:()=>check("남")},
-    {text:"동", action:()=>check("동")},
-    {text:"서", action:()=>check("서")}
-  ]);
+  `);
 
   roundTimer = setTimeout(()=>{
-    endDeath("망설이는 순간, 낙엽이 바로 뒤에서 밟혔다.");
+    death("낙엽이 바로 등 뒤에서 밟혔다.");
   },5000);
 }
 
@@ -154,7 +161,7 @@ function check(dir){
   clearTimeout(roundTimer);
 
   if(dir !== correctDir){
-    endDeath("비명을 따라 움직인 순간 숨결이 목덜미에 닿았다.");
+    death("비명을 따라 움직인 순간 숨결이 겹쳤다.");
     return;
   }
 
@@ -164,11 +171,9 @@ function check(dir){
 }
 
 /* ================= 사망 ================= */
-function endDeath(text){
+function death(text){
   clearTimeout(surviveTimer);
-  clearTimeout(roundTimer);
   hiddenBgm.pause();
-
   render(`
     <div class="part">
       <h2>사망</h2>
