@@ -169,7 +169,7 @@ function library(){
 render(`
 <div class="part"><h2>서재</h2><p>사진과 해부학 책.</p></div>
 `,[
-{text:"메모",action:()=>render(`<p class="memo">TV의 숫자를 기억해라. 3849</p>`,[{text:"뒤로",action:library}])},
+{text:"메모",action:()=>render(`<p class="memo">TV의 숫자를 기억해라. 그는 기회를 준다...</p>`,[{text:"뒤로",action:library}])},
 {text:"서랍",action:()=>{state.basementKey=true; render(`<p>지하실 열쇠 획득.</p>`,[{text:"뒤로",action:library}]);}},
 {text:"나간다",action:()=>randomHunter(secondFloor)}
 ],true);
