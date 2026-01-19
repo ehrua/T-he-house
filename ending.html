@@ -1,1 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>히든 엔딩 : 사이렌 이후</title>
+<style>
+body{
+background:#000;
+color:#eee;
+font-family:"Noto Serif KR",serif;
+line-height:1.8;
+}
+#wrap{
+max-width:800px;
+margin:60px auto;
+padding:20px;
+}
+.fade{
+animation:fadein 2s forwards;
+opacity:0;
+}
+@keyframes fadein{
+to{opacity:1;}
+}
+button{
+width:100%;
+padding:14px;
+margin-top:20px;
+background:#111;
+color:#eee;
+border:1px solid #444;
+cursor:pointer;
+}
+button:hover{background:#222;}
+.memo{color:#aaa;font-style:italic;}
+hr{border:0;border-top:1px solid #333;margin:40px 0;}
+</style>
+</head>
+
+<body>
+<div id="wrap"></div>
+
+<script>
+/* ===== 사운드 ===== */
+const hiddenBgm = new Audio("./sound/Symmetry.mp3");
+const sirenSfx = new Audio("./sound/siren.mp3"); // 있으면 좋고 없어도 됨
+
+hiddenBgm.loop = true;
+hiddenBgm.volume = 0.7;
+
+const wrap = document.getElementById("wrap");
+
+function render(html){
+wrap.innerHTML = html;
+}
+
+function start(){
+hiddenBgm.play().catch(()=>{});
+
+render(`
+<div class="fade">
+<h2>히든 엔딩</h2>
+<p>사이렌 소리가 점점 가까워진다.</p>
+</div>
+`);
+setTimeout(scene1,3500);
+}
+
+function scene1(){
+render(`
+<div class="fade">
+<p>
+골목 끝에서 붉고 푸른 빛이 번쩍인다.<br>
+그제서야 다리가 풀린다.
+</p>
+</div>
+`);
+setTimeout(scene2,3500);
+}
+
+function scene2(){
+render(`
+<div class="fade">
+<p>
+경찰은 아무 질문도 하지 않는다.<br>
+담요를 덮어주고, 이름을 확인하지도 않는다.
+</p>
+<p class="memo">
+“…이미 알고 있었다.”
+</p>
+</div>
+`);
+setTimeout(scene3,4000);
+}
+
+function scene3(){
+render(`
+<div class="fade">
+<hr>
+<p>
+구급차 안에서 잠시 눈을 붙인다.
+</p>
+<p>
+창문에 비친 내 얼굴 옆으로<br>
+누군가의 그림자가 겹쳐 보인다.
+</p>
+</div>
+`);
+setTimeout(scene4,4500);
+}
+
+function scene4(){
+render(`
+<div class="fade">
+<p class="memo">
+112는 받지 않는 번호가 아니다.<br>
+하지만, 모두가 같은 곳으로 연결되지는 않는다.
+</p>
+<hr>
+<button onclick="ending()">끝까지 본다</button>
+</div>
+`);
+}
+
+function ending(){
+hiddenBgm.volume = 0.4;
+render(`
+<div class="fade">
+<h2>END</h2>
+<p>
+다음 날 뉴스에는<br>
+<i>“실종 사건, 피해자 구조”</i>라는 짧은 기사만 실렸다.
+</p>
+
+<p class="memo">
+납치범에 대한 언급은 없었다.<br>
+공중전화에 대한 기록도 없었다.
+</p>
+
+<p class="memo">
+그리고 112 통화 기록은<br>
+존재하지 않았다.
+</p>
+
+<hr>
+<p class="memo">
+히든 엔딩 완료
+</p>
+</div>
+`);
+}
+start();
+</script>
+</body>
+</html>
 
