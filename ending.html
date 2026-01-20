@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>히든 엔딩 </title>
+<title>히든 엔딩</title>
 <style>
 body{
     background:#000;
@@ -37,6 +37,7 @@ button:active{
     width:100%;
     transition:width 0.2s linear;
 }
+p{line-height:1.7;}
 </style>
 </head>
 
@@ -48,17 +49,15 @@ button:active{
 const bgm = new Audio("./sound/TheDread.mp3");
 const phoneSfx = new Audio("./sound/phone.mp3");
 const leavesSfx = new Audio("./sound/fallenleaves.mp3");
-const screamSfx = new Audio("./sound/screm2.mp3");
 
 bgm.loop = true;
-bgm.volume = 0.2;
+bgm.volume = 0.25;
 
 /* ===== 상태 ===== */
 let holding = false;
 let breath = 100;
 let survived = 0;
-let screamTimer = null;
-let leavesTimeout = null;
+let leavesTimer = null;
 let leavesPlaying = false;
 
 /* ===== 렌더 ===== */
@@ -78,32 +77,40 @@ document.getElementById("call112").onclick = () => {
     bgm.play().catch(()=>{});
     phoneSfx.currentTime = 0;
     phoneSfx.play();
-    setTimeout(policeCall,3000);
+
+    setTimeout(()=>{
+        phoneSfx.pause();
+        phoneSfx.currentTime = 0;
+        policeCall();
+    },3000);
 };
 
-/* ===== 통화 ===== */
+/* ===== 경찰 통화 ===== */
 function policeCall(){
-    phoneSfx.pause();
-    phoneSfx.currentTime = 0;
-
     render(`
 <p>뚜…</p>
-<p>경찰: 판태현 씨죠?</p>
-<p>태현: 네? 제 이름을 어떻게…</p>
-<p>경찰: 지금 당장 출동하겠습니다.</p>
-<button id="hide">전화를 끊고 숨는다</button>
+<p><b>경찰:</b> 태현씨죠?</p>
+<p><b>태현:</b> 네? 어떻게 제 이름을…</p>
+<p><b>경찰?:</b> 지금 사건 장소 특정했고 지금 당장 출발하겠습니다.</p>
+<p><b>경찰?:</b> 10분 정도 예상되네요.</p>
+<p><b>경찰?:</b> 공중전화 부스 앞쪽에 있는 돌 뒤에 숨어 계세요.</p>
+<p><b>경찰?:</b> 아, 그리고… 낙엽 밟는 소리 조심하세요.</p>
+<p><b>태현:</b> 네? …</p>
+<p><i>뚝—</i></p>
+<button id="hide">돌 뒤에 숨는다</button>
 `);
+
     document.getElementById("hide").onclick = startMiniGame;
 }
 
-/* ===== 미니게임 ===== */
+/* ===== 숨참기 미니게임 ===== */
 function startMiniGame(){
     breath = 100;
     survived = 0;
 
     render(`
-<h2>숨을 참아라</h2>
-<p>소리가 나면 들킬 것이다.</p>
+<h2>돌 뒤</h2>
+<p>숨을 죽여야 한다. 소리가 나면 끝이다.</p>
 
 <div class="bar">
     <div class="fill" id="breathBar"></div>
@@ -120,36 +127,24 @@ function startMiniGame(){
     btn.ontouchstart = (e)=>{ e.preventDefault(); holding=true; };
     btn.ontouchend = ()=>holding=false;
 
-    /* ===== 발소리(낙엽) 로직 ===== */
-    function playLeavesOnce(){
+    /* ===== 발소리 로직 ===== */
+    leavesTimer = setInterval(()=>{
         if(leavesPlaying) return;
-        leavesPlaying = true;
 
-        // 가끔 크게 (15%)
-        leavesSfx.volume = Math.random() < 0.15 ? 1.0 : 0.5;
+        leavesPlaying = true;
+        leavesSfx.volume = Math.random() < 0.2 ? 1.0 : 0.6;
         leavesSfx.currentTime = 0;
         leavesSfx.play();
 
-        // 3초만 재생
+        const duration = 3000 + Math.random()*2000; // 3~5초
+
         setTimeout(()=>{
             leavesSfx.pause();
             leavesSfx.currentTime = 0;
             leavesPlaying = false;
+        }, duration);
 
-            // 다음 발소리까지 긴 무음 (12~22초)
-            const next = Math.random()*10000 + 12000;
-            leavesTimeout = setTimeout(playLeavesOnce, next);
-        }, 3000);
-    }
-
-    // 최초 접근은 8초 후
-    leavesTimeout = setTimeout(playLeavesOnce, 8000);
-
-    /* ===== 비명 ===== */
-    screamTimer = setInterval(()=>{
-        screamSfx.currentTime = 0;
-        screamSfx.play();
-    }, 20000);
+    }, 10000); // 10초마다
 
     gameLoop();
 }
@@ -176,7 +171,7 @@ function gameLoop(){
 
         if(survived >= 60){
             clearAll(loop);
-            render("<h2>히든 엔딩</h2><p>멀리서 사이렌이 들린다.</p>");
+            render("<h2>히든 엔딩</h2><p>멀리서 사이렌 소리가 들린다.</p>");
         }
     },200);
 }
@@ -184,11 +179,9 @@ function gameLoop(){
 /* ===== 정리 ===== */
 function clearAll(loop){
     clearInterval(loop);
-    clearInterval(screamTimer);
-    clearTimeout(leavesTimeout);
+    clearInterval(leavesTimer);
+    leavesSfx.pause();
 }
 </script>
 </body>
 </html>
-
-
