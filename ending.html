@@ -57,9 +57,12 @@ const game = document.getElementById("game");
 let holding = false;
 let breath = 100;
 let survived = 0;
-let leavesTimer = null;
+
+let leavesInterval = null;
 let screamTimer = null;
+
 let leavesPlaying = false;
+let leafDangerTime = 0; // ★ 판정 기준 시간
 
 /* ===== 렌더 ===== */
 function render(html){
@@ -77,6 +80,7 @@ document.getElementById("call").onclick = ()=>{
     bgm.play().catch(()=>{});
     phoneSfx.currentTime = 0;
     phoneSfx.play();
+
     render("<p>뚜…</p>");
 
     setTimeout(()=>{
@@ -86,7 +90,7 @@ document.getElementById("call").onclick = ()=>{
     },3000);
 };
 
-/* ===== 통화 ===== */
+/* ===== 경찰 통화 ===== */
 function policeCall(){
     const lines = [
         "경찰: 태현씨죠?",
@@ -104,52 +108,25 @@ function policeCall(){
 
     const talk = setInterval(()=>{
         const p = document.createElement("p");
-        p.textContent = lines[i];
+        p.innerText = lines[i];
         game.appendChild(p);
         i++;
 
         if(i >= lines.length){
             clearInterval(talk);
             const btn = document.createElement("button");
-            btn.textContent = "돌 뒤에 숨는다";
+            btn.innerText = "돌 뒤에 숨는다";
             btn.onclick = startMiniGame;
             game.appendChild(btn);
         }
     },1200);
 }
 
-/* ===== 낙엽 소리 로직 ===== */
-function scheduleLeaves(){
-    leavesTimer = setTimeout(()=>{
-        if(leavesPlaying) return;
-
-        leavesPlaying = true;
-
-        const prevBgm = bgm.volume;
-        bgm.volume = 0.1;
-        screamSfx.pause();
-
-        leavesSfx.currentTime = 0;
-        leavesSfx.play().catch(()=>{});
-
-        const duration = 3000 + Math.random()*2000; // 3~5초
-
-        setTimeout(()=>{
-            leavesSfx.pause();
-            leavesSfx.currentTime = 0;
-            bgm.volume = prevBgm;
-            leavesPlaying = false;
-
-            scheduleLeaves(); // 정확히 10초 후 다시
-        },duration);
-
-    },10000);
-}
-
 /* ===== 미니게임 ===== */
 function startMiniGame(){
     breath = 100;
     survived = 0;
+    holding = false;
 
     render(`
     <h2>돌 뒤</h2>
@@ -162,14 +139,39 @@ function startMiniGame(){
     btn.onmousedown = ()=>holding = true;
     btn.onmouseup = btn.onmouseleave = ()=>holding = false;
 
+    /* 비명 (낙엽 중엔 정지) */
     screamTimer = setInterval(()=>{
-        if(!leavesPlaying){
+        if(!leavesPlaying && screamSfx.paused){
             screamSfx.currentTime = 0;
-            screamSfx.play().catch(()=>{});
+            screamSfx.play();
         }
     },20000);
 
-    scheduleLeaves();
+    /* 낙엽 소리: 10초 간격 / 3~5초 */
+    leavesInterval = setInterval(()=>{
+        if(leavesPlaying) return;
+
+        leavesPlaying = true;
+        leafDangerTime = Date.now();
+
+        leavesSfx.currentTime = 0;
+        leavesSfx.play();
+
+        const prevVolume = bgm.volume;
+        bgm.volume = 0.08;
+        screamSfx.pause();
+
+        const duration = 3000 + Math.random()*2000;
+
+        setTimeout(()=>{
+            leavesSfx.pause();
+            leavesSfx.currentTime = 0;
+            bgm.volume = prevVolume;
+            leavesPlaying = false;
+        },duration);
+
+    },10000);
+
     gameLoop();
 }
 
@@ -178,14 +180,19 @@ function gameLoop(){
     const bar = document.getElementById("breathBar");
 
     const loop = setInterval(()=>{
-        if(leavesPlaying && holding){
-            die(loop,"낙엽이 밟혔다.");
-            return;
-        }
-
-        if(holding && !leavesPlaying){
+        if(holding){
             breath -= 2;
             survived++;
+
+            // ★ 낙엽 판정 (보통: 1초 유예)
+            if(leavesPlaying){
+                const elapsed = Date.now() - leafDangerTime;
+                if(elapsed > 1000){
+                    die(loop,"낙엽을 크게 밟았다.");
+                    return;
+                }
+            }
+
         }else{
             breath += 1;
         }
@@ -212,7 +219,7 @@ function die(loop,msg){
 
 function end(loop){
     clearInterval(loop);
-    clearTimeout(leavesTimer);
+    clearInterval(leavesInterval);
     clearInterval(screamTimer);
     leavesSfx.pause();
     screamSfx.pause();
