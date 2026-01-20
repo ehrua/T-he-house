@@ -57,7 +57,7 @@ const game = document.getElementById("game");
 let holding = false;
 let breath = 100;
 let survived = 0;
-let leavesInterval = null;
+let leavesTimer = null;
 let screamTimer = null;
 let leavesPlaying = false;
 
@@ -77,7 +77,6 @@ document.getElementById("call").onclick = ()=>{
     bgm.play().catch(()=>{});
     phoneSfx.currentTime = 0;
     phoneSfx.play();
-
     render("<p>뚜…</p>");
 
     setTimeout(()=>{
@@ -87,7 +86,7 @@ document.getElementById("call").onclick = ()=>{
     },3000);
 };
 
-/* ===== 경찰 통화 ===== */
+/* ===== 통화 ===== */
 function policeCall(){
     const lines = [
         "경찰: 태현씨죠?",
@@ -105,18 +104,46 @@ function policeCall(){
 
     const talk = setInterval(()=>{
         const p = document.createElement("p");
-        p.innerText = lines[i];
+        p.textContent = lines[i];
         game.appendChild(p);
         i++;
 
         if(i >= lines.length){
             clearInterval(talk);
             const btn = document.createElement("button");
-            btn.innerText = "돌 뒤에 숨는다";
+            btn.textContent = "돌 뒤에 숨는다";
             btn.onclick = startMiniGame;
             game.appendChild(btn);
         }
     },1200);
+}
+
+/* ===== 낙엽 소리 로직 ===== */
+function scheduleLeaves(){
+    leavesTimer = setTimeout(()=>{
+        if(leavesPlaying) return;
+
+        leavesPlaying = true;
+
+        const prevBgm = bgm.volume;
+        bgm.volume = 0.1;
+        screamSfx.pause();
+
+        leavesSfx.currentTime = 0;
+        leavesSfx.play().catch(()=>{});
+
+        const duration = 3000 + Math.random()*2000; // 3~5초
+
+        setTimeout(()=>{
+            leavesSfx.pause();
+            leavesSfx.currentTime = 0;
+            bgm.volume = prevBgm;
+            leavesPlaying = false;
+
+            scheduleLeaves(); // 정확히 10초 후 다시
+        },duration);
+
+    },10000);
 }
 
 /* ===== 미니게임 ===== */
@@ -135,36 +162,14 @@ function startMiniGame(){
     btn.onmousedown = ()=>holding = true;
     btn.onmouseup = btn.onmouseleave = ()=>holding = false;
 
-    /* 비명 (낙엽 중엔 정지됨) */
     screamTimer = setInterval(()=>{
-        if(!leavesPlaying && screamSfx.paused){
+        if(!leavesPlaying){
             screamSfx.currentTime = 0;
-            screamSfx.play();
+            screamSfx.play().catch(()=>{});
         }
     },20000);
 
-    /* 낙엽 소리: 10초마다 / 3~5초 */
-    leavesInterval = setInterval(()=>{
-        if(leavesPlaying) return;
-
-        leavesPlaying = true;
-        leavesSfx.currentTime = 0;
-        leavesSfx.play();
-
-        const prevBgm = bgm.volume;
-        bgm.volume = 0;
-        screamSfx.pause();
-
-        const duration = 3000 + Math.random()*2000;
-
-        setTimeout(()=>{
-            leavesSfx.pause();
-            leavesSfx.currentTime = 0;
-            bgm.volume = prevBgm;
-            leavesPlaying = false;
-        },duration);
-    },10000);
-
+    scheduleLeaves();
     gameLoop();
 }
 
@@ -173,14 +178,16 @@ function gameLoop(){
     const bar = document.getElementById("breathBar");
 
     const loop = setInterval(()=>{
-        if(holding){
+        if(leavesPlaying && holding){
+            die(loop,"낙엽이 밟혔다.");
+            return;
+        }
+
+        if(holding && !leavesPlaying){
             breath -= 2;
             survived++;
         }else{
-            if(leavesPlaying){
-                die(loop,"소리를 냈다.");
-                return;
-            }
+            breath += 1;
         }
 
         breath = Math.max(0,Math.min(100,breath));
@@ -197,7 +204,7 @@ function gameLoop(){
     },200);
 }
 
-/* ===== 종료 처리 ===== */
+/* ===== 종료 ===== */
 function die(loop,msg){
     end(loop);
     render(`<h2>사망</h2><p>${msg}</p>`);
@@ -205,7 +212,7 @@ function die(loop,msg){
 
 function end(loop){
     clearInterval(loop);
-    clearInterval(leavesInterval);
+    clearTimeout(leavesTimer);
     clearInterval(screamTimer);
     leavesSfx.pause();
     screamSfx.pause();
