@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>히든 엔딩</title>
+<title>히든 엔딩 - 쉬움</title>
 <style>
 body{
     background:#000;
@@ -62,7 +62,7 @@ let leavesInterval = null;
 let screamTimer = null;
 
 let leavesPlaying = false;
-let leafDangerTime = 0; // ★ 판정 기준 시간
+let leafStartTime = 0;
 
 /* ===== 렌더 ===== */
 function render(html){
@@ -139,26 +139,26 @@ function startMiniGame(){
     btn.onmousedown = ()=>holding = true;
     btn.onmouseup = btn.onmouseleave = ()=>holding = false;
 
-    /* 비명 (낙엽 중엔 정지) */
+    /* 비명 */
     screamTimer = setInterval(()=>{
         if(!leavesPlaying && screamSfx.paused){
             screamSfx.currentTime = 0;
             screamSfx.play();
         }
-    },20000);
+    },25000);
 
-    /* 낙엽 소리: 10초 간격 / 3~5초 */
+    /* 낙엽 소리 */
     leavesInterval = setInterval(()=>{
         if(leavesPlaying) return;
 
         leavesPlaying = true;
-        leafDangerTime = Date.now();
+        leafStartTime = Date.now();
 
         leavesSfx.currentTime = 0;
         leavesSfx.play();
 
-        const prevVolume = bgm.volume;
-        bgm.volume = 0.08;
+        const prevVol = bgm.volume;
+        bgm.volume = 0.1;
         screamSfx.pause();
 
         const duration = 3000 + Math.random()*2000;
@@ -166,7 +166,7 @@ function startMiniGame(){
         setTimeout(()=>{
             leavesSfx.pause();
             leavesSfx.currentTime = 0;
-            bgm.volume = prevVolume;
+            bgm.volume = prevVol;
             leavesPlaying = false;
         },duration);
 
@@ -175,26 +175,25 @@ function startMiniGame(){
     gameLoop();
 }
 
-/* ===== 게임 루프 ===== */
+/* ===== 게임 루프 (쉬움 판정) ===== */
 function gameLoop(){
     const bar = document.getElementById("breathBar");
 
     const loop = setInterval(()=>{
         if(holding){
-            breath -= 2;
+            breath -= 1.5;
             survived++;
 
-            // ★ 낙엽 판정 (보통: 1초 유예)
             if(leavesPlaying){
-                const elapsed = Date.now() - leafDangerTime;
-                if(elapsed > 1000){
-                    die(loop,"낙엽을 크게 밟았다.");
+                const elapsed = Date.now() - leafStartTime;
+                if(elapsed > 2500){
+                    die(loop,"낙엽을 밟았다.");
                     return;
                 }
             }
 
         }else{
-            breath += 1;
+            breath += 2; // 회복 빠름
         }
 
         breath = Math.max(0,Math.min(100,breath));
