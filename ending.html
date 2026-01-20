@@ -2,151 +2,177 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>히든 엔딩 - 쉬움</title>
+<title>히든 엔딩</title>
 <style>
-body{background:#000;color:#eee;font-family:"Noto Serif KR",serif;}
-#game{max-width:700px;margin:40px auto;}
-button{
-width:100%;padding:14px;margin-top:10px;
-background:#111;color:#eee;border:1px solid #444;cursor:pointer;
+body {
+    margin: 0;
+    background: black;
+    color: #ddd;
+    font-family: "Malgun Gothic", monospace;
 }
-.bar{width:100%;height:20px;background:#222;margin-top:15px;}
-.fill{height:100%;background:#aaa;width:100%;transition:width .2s linear;}
-p{line-height:1.7;}
+#screen {
+    padding: 30px;
+    max-width: 800px;
+    margin: auto;
+}
+button {
+    background: black;
+    color: #fff;
+    border: 1px solid #555;
+    padding: 10px 20px;
+    margin-top: 15px;
+    cursor: pointer;
+}
+button:hover {
+    background: #222;
+}
+.hidden {
+    display: none;
+}
+.dialogue {
+    margin-top: 20px;
+    line-height: 1.8;
+}
+.warning {
+    color: #ff5555;
+}
 </style>
 </head>
 
 <body>
-<div id="game"></div>
+<div id="screen">
+
+<div id="phoneScene">
+    <p>공중전화 부스 안.</p>
+    <p>수화기를 들자 차가운 금속 감촉이 손에 남는다.</p>
+    <p>번호를 입력하세요.</p>
+    <input id="num" maxlength="3" value="112" disabled>
+    <br>
+    <button onclick="callPolice()">확인</button>
+</div>
+
+<div id="callDialogue" class="hidden dialogue"></div>
+
+<div id="hideScene" class="hidden">
+    <p>나는 경찰이 말한 돌 뒤로 몸을 숨겼다.</p>
+    <p class="warning">낙엽 소리가 들리는 동안은 숨을 참아야 한다.</p>
+    <button onclick="holdBreath()">입 막기</button>
+    <p id="status"></p>
+</div>
+
+<div id="endingScene" class="hidden dialogue"></div>
+
+</div>
+
+<audio id="phoneSound" src="phone.mp3"></audio>
+<audio id="leafSound" src="leaf.mp3"></audio>
+<audio id="Symmetry" src="Symmetry.mp3" loop></audio>
 
 <script>
-/* ===== 사운드 ===== */
-const bgm=new Audio("./sound/TheDread.mp3");
-const phoneSfx=new Audio("./sound/phone.mp3");
-const leavesSfx=new Audio("./sound/fallenleaves.mp3");
+const phoneSound = document.getElementById("phoneSound");
+const leafSound = document.getElementById("leafSound");
 
-bgm.loop=true;
-bgm.volume=0.25;
+let holding = false;
+let danger = false;
+let survivedRounds = 0;
 
-/* ===== 상태 ===== */
-const game=document.getElementById("game");
-let holding=false;
-let breath=100;
-let survived=0;
+function callPolice() {
+    document.getElementById("phoneScene").classList.add("hidden");
+    phoneSound.play();
 
-let leavesPlaying=false;
-let leavesStart=0;
-let leavesInterval=null;
-
-/* ===== 렌더 ===== */
-function render(html){ game.innerHTML=html; }
-
-/* ===== 시작 ===== */
-render(`
-<h2>공중전화</h2>
-<p>수화기를 들었다.</p>
-<button id="call">112를 누른다</button>
-`);
-
-document.getElementById("call").onclick=()=>{
-bgm.play().catch(()=>{});
-phoneSfx.play();
-render("<p>뚜…</p>");
-setTimeout(()=>{ phoneSfx.pause(); policeCall(); },3000);
-};
-
-/* ===== 통화 ===== */
-function policeCall(){
-render(`
-<p>경찰: 태현씨죠?</p>
-<p>태현: 네? 어떻게 제 이름을…</p>
-<p>경찰?: 공중전화 앞 돌 뒤에 숨어 계세요.</p>
-<p>경찰?: 낙엽 소리 조심하세요.</p>
-<button id="hide">돌 뒤에 숨는다</button>
-`);
-document.getElementById("hide").onclick=startMiniGame;
+    setTimeout(() => {
+        phoneSound.pause();
+        phoneSound.currentTime = 0;
+        showDialogue();
+    }, 3000);
 }
 
-/* ===== 미니게임 ===== */
-function startMiniGame(){
-breath=100; survived=0; holding=false;
-
-render(`
-<h2>돌 뒤</h2>
-<p>낙엽 소리가 날 때 입을 막아라.</p>
-<div class="bar"><div class="fill" id="bar"></div></div>
-<button id="hold">입 막기</button>
-`);
-
-const btn=document.getElementById("hold");
-btn.onmousedown=()=>holding=true;
-btn.onmouseup=btn.onmouseleave=()=>holding=false;
-
-/* 낙엽 */
-leavesInterval=setInterval(()=>{
-if(leavesPlaying) return;
-
-leavesPlaying=true;
-leavesStart=Date.now();
-leavesSfx.currentTime=0;
-leavesSfx.play();
-
-bgm.volume=0.1;
-
-setTimeout(()=>{
-leavesSfx.pause();
-leavesPlaying=false;
-bgm.volume=0.25;
-},3000+Math.random()*2000);
-
-},10000);
-
-gameLoop();
+function showDialogue() {
+    const d = document.getElementById("callDialogue");
+    d.classList.remove("hidden");
+    d.innerHTML = `
+    <p>경찰: 태현 씨죠?</p>
+    <p>태현: 네? 어떻게 제 이름을...</p>
+    <p>경찰: 통화 위치 확인했습니다. 지금 출발합니다.</p>
+    <p>경찰: 10분 정도 걸릴 겁니다.</p>
+    <p>경찰: 공중전화 부스 앞에 있는 돌 뒤로 가서 숨어 계세요.</p>
+    <p>태현: 알겠습니다...</p>
+    <p>경찰: 그리고 하나 더.</p>
+    <p>경찰: <strong>낙엽 밟는 소리, 조심하세요.</strong></p>
+    <p>태현: 네? 그게 무슨...</p>
+    <p>(뚝)</p>
+    <button onclick="startHide()">전화 끊기</button>
+    `;
 }
 
-/* ===== 게임 루프 ===== */
-function gameLoop(){
-const bar=document.getElementById("bar");
-
-const loop=setInterval(()=>{
-/* 낙엽 판정 */
-if(leavesPlaying && !holding){
-const elapsed=Date.now()-leavesStart;
-if(elapsed>1500){
-clearAll(loop);
-render("<h2>사망</h2><p>낙엽을 밟았다.</p>");
-return;
-}
+function startHide() {
+    document.getElementById("callDialogue").classList.add("hidden");
+    document.getElementById("hideScene").classList.remove("hidden");
+    startLeafCycle();
 }
 
-/* 숨 */
-if(holding){
-breath-=1.2;
-survived++;
-}else{
-breath+=2;
+function holdBreath() {
+    holding = true;
+    document.getElementById("status").innerText = "숨을 참고 있다...";
+    setTimeout(() => {
+        holding = false;
+        document.getElementById("status").innerText = "";
+    }, 3500); // 쉬움 모드
 }
 
-breath=Math.max(0,Math.min(100,breath));
-bar.style.width=breath+"%";
+function startLeafCycle() {
+    setTimeout(() => {
+        danger = true;
+        leafSound.play();
 
-if(breath<=0){
-clearAll(loop);
-render("<h2>사망</h2><p>숨이 새어 나갔다.</p>");
+        setTimeout(() => {
+            leafSound.pause();
+            leafSound.currentTime = 0;
+            danger = false;
+
+            if (!holding) {
+                death();
+                return;
+            }
+
+            survivedRounds++;
+            if (survivedRounds >= 3) {
+                goodEnding();
+            } else {
+                startLeafCycle();
+            }
+
+        }, 3000);
+
+    }, 5000); // 여유 있는 텀
 }
 
-if(survived>=60){
-clearAll(loop);
-render("<h2>히든 엔딩</h2><p>멀리서 사이렌이 들린다.</p>");
-}
-},200);
+function death() {
+    document.getElementById("hideScene").classList.add("hidden");
+    const e = document.getElementById("endingScene");
+    e.classList.remove("hidden");
+    e.innerHTML = `
+    <p>숨이 새어나가는 순간.</p>
+    <p>바로 뒤에서 낙엽이 밟힌다.</p>
+    <p>누군가의 손이 입을 막았다.</p>
+    <p class="warning">히든 엔딩: 실패</p>
+    `;
 }
 
-function clearAll(loop){
-clearInterval(loop);
-clearInterval(leavesInterval);
-leavesSfx.pause();
+function goodEnding() {
+    document.getElementById("hideScene").classList.add("hidden");
+    const e = document.getElementById("endingScene");
+    e.classList.remove("hidden");
+    e.innerHTML = `
+    <p>멀리서 사이렌 소리가 들린다.</p>
+    <p>낙엽 소리는 멈췄다.</p>
+    <p>누군가는 도망친 것 같다.</p>
+    <p>경찰: 태현 씨! 이제 나와도 됩니다.</p>
+    <p>나는 아직도 숨을 쉬는 법을 잊은 채였다.</p>
+    <p><strong>히든 엔딩: 생존</strong></p>
+    `;
 }
 </script>
+
 </body>
 </html>
