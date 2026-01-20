@@ -2,33 +2,41 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>히든 엔딩 : 112</title>
+<title>히든 엔딩 </title>
 <style>
 body{
-background:#000;
-color:#eee;
-font-family:"Noto Serif KR",serif;
-line-height:1.8;
+    background:#000;
+    color:#eee;
+    font-family:"Noto Serif KR",serif;
 }
 #game{
-max-width:800px;
-margin:60px auto;
-padding:20px;
+    max-width:700px;
+    margin:40px auto;
 }
-.fade{opacity:0;animation:fade 1.5s forwards;}
-@keyframes fade{to{opacity:1;}}
 button{
-width:100%;
-padding:14px;
-margin-top:20px;
-background:#111;
-color:#eee;
-border:1px solid #444;
-cursor:pointer;
+    width:100%;
+    padding:14px;
+    margin-top:10px;
+    background:#111;
+    color:#eee;
+    border:1px solid #444;
+    cursor:pointer;
 }
-button:hover{background:#222;}
-.memo{color:#aaa;font-style:italic;}
-hr{border:0;border-top:1px solid #333;margin:40px 0;}
+button:active{
+    background:#333;
+}
+.bar{
+    width:100%;
+    height:20px;
+    background:#222;
+    margin-top:15px;
+}
+.fill{
+    height:100%;
+    background:#aaa;
+    width:100%;
+    transition:width 0.2s linear;
+}
 </style>
 </head>
 
@@ -37,171 +45,150 @@ hr{border:0;border-top:1px solid #333;margin:40px 0;}
 
 <script>
 /* ===== 사운드 ===== */
-const hiddenBgm = new Audio("./sound/Symmetry.mp3");
-const phoneRing = new Audio("./sound/phone.mp3"); // 통화음 (뚜-뚜-)
-const connectSfx = new Audio("./sound/connect.mp3"); // 받는 순간
-const sirenSfx = new Audio("./sound/siren.mp3");
+const bgm = new Audio("./sound/TheDread.mp3");
+const phoneSfx = new Audio("./sound/phone.mp3");
+const leavesSfx = new Audio("./sound/fallenleaves.mp3");
+const screamSfx = new Audio("./sound/screm2.mp3");
 
-hiddenBgm.loop = true;
-hiddenBgm.volume = 0.5;
-phoneRing.loop = true;
-phoneRing.volume = 0.9;
-connectSfx.volume = 0.9;
-sirenSfx.volume = 0.7;
+bgm.loop = true;
+bgm.volume = 0.2;
 
+/* ===== 상태 ===== */
+let holding = false;
+let breath = 100;
+let survived = 0;
+let screamTimer = null;
+let leavesTimeout = null;
+let leavesPlaying = false;
+
+/* ===== 렌더 ===== */
 const game = document.getElementById("game");
-
 function render(html){
-game.innerHTML = html;
+    game.innerHTML = html;
 }
 
 /* ===== 시작 ===== */
 render(`
-<div class="fade">
 <h2>공중전화</h2>
-<p>112를 눌렀다.</p>
-<button onclick="dial()">통화 시도</button>
-</div>
+<p>수화기를 들었다.</p>
+<button id="call112">112를 누른다</button>
 `);
 
-function dial(){
-hiddenBgm.play().catch(()=>{});
-phoneRing.currentTime = 0;
-phoneRing.play();
+document.getElementById("call112").onclick = () => {
+    bgm.play().catch(()=>{});
+    phoneSfx.currentTime = 0;
+    phoneSfx.play();
+    setTimeout(policeCall,3000);
+};
 
-render(`
-<div class="fade">
+/* ===== 통화 ===== */
+function policeCall(){
+    phoneSfx.pause();
+    phoneSfx.currentTime = 0;
+
+    render(`
 <p>뚜…</p>
-<p>뚜…</p>
-<p>뚜…</p>
-</div>
+<p>경찰: 판태현 씨죠?</p>
+<p>태현: 네? 제 이름을 어떻게…</p>
+<p>경찰: 지금 당장 출동하겠습니다.</p>
+<button id="hide">전화를 끊고 숨는다</button>
 `);
-
-setTimeout(answer, 3000);
+    document.getElementById("hide").onclick = startMiniGame;
 }
 
-/* ===== 경찰 받음 ===== */
-function answer(){
-phoneRing.pause();
-phoneRing.currentTime = 0;
-connectSfx.play();
+/* ===== 미니게임 ===== */
+function startMiniGame(){
+    breath = 100;
+    survived = 0;
 
-render(`
-<div class="fade">
-<p><b>경찰:</b> 112입니다.</p>
-<p><b>경찰:</b> 판태현 씨죠?</p>
+    render(`
+<h2>숨을 참아라</h2>
+<p>소리가 나면 들킬 것이다.</p>
+
+<div class="bar">
+    <div class="fill" id="breathBar"></div>
 </div>
+
+<button id="holdBtn">숨 참기</button>
 `);
 
-setTimeout(dialog1, 3000);
+    const btn = document.getElementById("holdBtn");
+
+    btn.onmousedown = ()=>holding=true;
+    btn.onmouseup = ()=>holding=false;
+    btn.onmouseleave = ()=>holding=false;
+    btn.ontouchstart = (e)=>{ e.preventDefault(); holding=true; };
+    btn.ontouchend = ()=>holding=false;
+
+    /* ===== 발소리(낙엽) 로직 ===== */
+    function playLeavesOnce(){
+        if(leavesPlaying) return;
+        leavesPlaying = true;
+
+        // 가끔 크게 (15%)
+        leavesSfx.volume = Math.random() < 0.15 ? 1.0 : 0.5;
+        leavesSfx.currentTime = 0;
+        leavesSfx.play();
+
+        // 3초만 재생
+        setTimeout(()=>{
+            leavesSfx.pause();
+            leavesSfx.currentTime = 0;
+            leavesPlaying = false;
+
+            // 다음 발소리까지 긴 무음 (12~22초)
+            const next = Math.random()*10000 + 12000;
+            leavesTimeout = setTimeout(playLeavesOnce, next);
+        }, 3000);
+    }
+
+    // 최초 접근은 8초 후
+    leavesTimeout = setTimeout(playLeavesOnce, 8000);
+
+    /* ===== 비명 ===== */
+    screamTimer = setInterval(()=>{
+        screamSfx.currentTime = 0;
+        screamSfx.play();
+    }, 20000);
+
+    gameLoop();
 }
 
-function dialog1(){
-render(`
-<div class="fade">
-<p><b>나:</b> …네?</p>
-<p><b>나:</b> 제 이름을 어떻게…</p>
-</div>
-`);
-setTimeout(dialog2, 3000);
+/* ===== 게임 루프 ===== */
+function gameLoop(){
+    const bar = document.getElementById("breathBar");
+
+    const loop = setInterval(()=>{
+        if(holding){
+            breath -= 2;
+            survived += 1;
+        }else{
+            breath += 1;
+        }
+
+        breath = Math.max(0,Math.min(100,breath));
+        bar.style.width = breath + "%";
+
+        if(breath <= 0){
+            clearAll(loop);
+            render("<h2>사망</h2><p>숨을 참지 못했다.</p>");
+        }
+
+        if(survived >= 60){
+            clearAll(loop);
+            render("<h2>히든 엔딩</h2><p>멀리서 사이렌이 들린다.</p>");
+        }
+    },200);
 }
 
-function dialog2(){
-render(`
-<div class="fade">
-<p><b>경찰:</b> 위치 확인했습니다.</p>
-<p><b>경찰:</b> 지금 그 자리에 그대로 계세요.</p>
-<p class="memo">키보드 두드리는 소리가 들린다.</p>
-</div>
-`);
-setTimeout(dialog3, 3500);
-}
-
-function dialog3(){
-render(`
-<div class="fade">
-<p><b>나:</b> 누군가… 근처에 있어요.</p>
-<p><b>나:</b> 발소리가…</p>
-</div>
-`);
-setTimeout(dialog4, 3000);
-}
-
-function dialog4(){
-render(`
-<div class="fade">
-<p><b>경찰:</b> 알고 있습니다.</p>
-<p><b>경찰:</b> 절대 뒤돌아보지 마세요.</p>
-<p><b>경찰:</b> 곧 도착합니다.</p>
-</div>
-`);
-setTimeout(siren, 3500);
-}
-
-/* ===== 구조 ===== */
-function siren(){
-sirenSfx.play().catch(()=>{});
-render(`
-<div class="fade">
-<p>멀리서 사이렌 소리가 겹쳐 들린다.</p>
-</div>
-`);
-setTimeout(scene1, 3500);
-}
-
-function scene1(){
-render(`
-<div class="fade">
-<p>
-골목 끝이 붉고 푸른 빛으로 물든다.<br>
-그제서야 손에서 수화기가 떨어진다.
-</p>
-</div>
-`);
-setTimeout(scene2, 3500);
-}
-
-function scene2(){
-render(`
-<div class="fade">
-<p>
-경찰은 질문하지 않는다.<br>
-신고 내용도, 상황 설명도 요구하지 않는다.
-</p>
-<p class="memo">이미 알고 있었다는 듯이.</p>
-</div>
-`);
-setTimeout(scene3, 4000);
-}
-
-function scene3(){
-render(`
-<div class="fade">
-<hr>
-<p>
-구급차 안.<br>
-창문에 비친 내 얼굴 옆으로
-다른 사람의 그림자가 겹친다.
-</p>
-</div>
-`);
-setTimeout(finale, 4500);
-}
-
-function finale(){
-hiddenBgm.volume = 0.35;
-render(`
-<div class="fade">
-<p class="memo">
-112는 항상 연결된다.<br>
-하지만 누가 받는지는 아무도 모른다.
-</p>
-<hr>
-<h2>히든 엔딩</h2>
-<p class="memo">SIREN</p>
-</div>
-`);
+/* ===== 정리 ===== */
+function clearAll(loop){
+    clearInterval(loop);
+    clearInterval(screamTimer);
+    clearTimeout(leavesTimeout);
 }
 </script>
 </body>
 </html>
+
+
