@@ -28,8 +28,6 @@ font-size:20px;
 }
 .memo{color:#aaa;font-style:italic;}
 h2{margin-top:0;}
-.bar{width:100%;height:20px;background:#222;margin:15px 0;}
-.fill{height:100%;background:#aaa;width:100%;transition:width .2s linear;}
 </style>
 </head>
 
@@ -40,13 +38,11 @@ h2{margin-top:0;}
 /* ================== 사운드 ================== */
 const bgm=new Audio("./sound/TheDread.mp3");
 const chaseBgm=new Audio("./sound/Anxiety.mp3");
-const hiddenBgm=new Audio("./sound/Symmetry.mp3");
 const phoneConnectSfx=new Audio("./sound/connect.mp3");
-const leavesSfx=new Audio("./sound/fallenleaves.mp3");
-const screamSfx=new Audio("./sound/screm2.mp3");
 
-bgm.loop=chaseBgm.loop=hiddenBgm.loop=true;
-bgm.volume=.7; chaseBgm.volume=.6; hiddenBgm.volume=.7;
+bgm.loop = chaseBgm.loop = true;
+bgm.volume = .7;
+chaseBgm.volume = .6;
 
 let audioUnlocked=false;
 function unlockAudio(){
@@ -63,17 +59,16 @@ function stopChase(){
 chaseBgm.pause();
 bgm.play().catch(()=>{});
 }
-function playHidden(){
-bgm.pause(); chaseBgm.pause();
-hiddenBgm.currentTime=0;
-hiddenBgm.play().catch(()=>{});
-}
 
 /* ================== 상태 ================== */
 const game=document.getElementById("game");
 const state={
-tweezers:false,basementKey:false,safeKey:false,frontKey:false,
-deathReason:"",input:"",
+tweezers:false,
+basementKey:false,
+safeKey:false,
+frontKey:false,
+deathReason:"",
+input:"",
 returnFunc:null
 };
 
@@ -91,7 +86,7 @@ game.appendChild(btn);
 });
 }
 
-/* ================== 추격 시스템 ================== */
+/* ================== 추격 ================== */
 let chaseTimer=null;
 
 function startChase(returnFunc){
@@ -103,8 +98,8 @@ render(`
 <p>등 뒤에서 급히 다가오는 기척.</p>
 <p>지금 선택하지 않으면 잡힌다.</p>
 `,[
-{text:"도망친다",action:()=>resolveChase()},
-{text:"숨는다",action:()=>resolveChase()}
+{text:"도망친다",action:resolveChase},
+{text:"숨는다",action:resolveChase}
 ]);
 
 chaseTimer=setTimeout(()=>{
@@ -126,7 +121,6 @@ death();
 }
 }
 
-/* ================== 랜덤 납치 → 추격 ================== */
 function randomHunter(next){
 if(Math.random()<0.28){
 startChase(next);
@@ -218,7 +212,10 @@ return;
 }
 render(`<div class="part"><h2>지하실</h2></div>`,[
 {text:"금고",action:()=>{
-if(!state.safeKey){render(`<p>잠겨 있다.</p>`,[{text:"뒤로",action:basement}]);return;}
+if(!state.safeKey){
+render(`<p>잠겨 있다.</p>`,[{text:"뒤로",action:basement}]);
+return;
+}
 state.frontKey=true;
 render(`<p>현관 열쇠다.</p>`,[{text:"뒤로",action:basement}]);
 }},
@@ -248,9 +245,17 @@ pad.appendChild(ok);
 }
 
 function checkDoor(){
-if(!state.frontKey){state.deathReason="문이 열리지 않는다."; death(); return;}
+if(!state.frontKey){
+state.deathReason="문이 열리지 않는다.";
+death();
+return;
+}
 if(state.input==="3849") outside();
-else{state.deathReason="경보음이 울렸다."; playChase(); death();}
+else{
+state.deathReason="경보음이 울렸다.";
+playChase();
+death();
+}
 }
 
 /* ================== 바깥 ================== */
@@ -271,53 +276,16 @@ drawKeypad("공중전화",callPhone);
 }
 
 function callPhone(){
+phoneConnectSfx.currentTime=0;
 phoneConnectSfx.play();
 setTimeout(()=>{
-if(state.input==="112") startMiniGame();
-else if(state.input==="3849"){playHidden(); render(`<h2>히든 엔딩 : 거래</h2>`);}
-else{state.deathReason="신호가 끊겼다."; death();}
+if(state.input==="112"){
+window.location.href="ending.html";
+}else{
+state.deathReason="신호가 끊겼다.";
+death();
+}
 },2000);
-}
-
-/* ================== 숨 참기 ================== */
-let holding=false,breath=100,survived=0,leavesTimer,screamTimer;
-function startMiniGame(){
-playHidden();
-render(`
-<h2>숨을 참아라</h2>
-<p>소리가 나면 끝이다.</p>
-<div class="bar"><div class="fill" id="breathBar"></div></div>
-<button id="holdBtn">숨 참기</button>
-`);
-const btn=document.getElementById("holdBtn");
-btn.onmousedown=()=>holding=true;
-btn.onmouseup=btn.onmouseleave=()=>holding=false;
-
-leavesTimer=setInterval(()=>{
-if(leavesSfx.paused){
-leavesSfx.volume=Math.random()<.2?1:.6;
-leavesSfx.currentTime=0; leavesSfx.play();
-}},7000+Math.random()*5000);
-
-screamTimer=setInterval(()=>{
-screamSfx.currentTime=0; screamSfx.play();
-},20000);
-
-const loop=setInterval(()=>{
-if(holding){breath-=2; survived++;}
-else breath+=1;
-breath=Math.max(0,Math.min(100,breath));
-document.getElementById("breathBar").style.width=breath+"%";
-
-if(breath<=0){clearAll(loop); render(`<h2>사망</h2><p>숨이 새어 나갔다.</p>`);}
-if(survived>=60){clearAll(loop); render(`<h2>히든 엔딩 : 사이렌</h2><p>멀리서 사이렌.</p>`);}
-},200);
-}
-
-function clearAll(loop){
-clearInterval(loop);
-clearInterval(leavesTimer);
-clearInterval(screamTimer);
 }
 
 /* ================== 사망 ================== */
