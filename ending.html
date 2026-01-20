@@ -46,7 +46,7 @@ button:active{background:#333;}
     height:100%;
     background:#aaa;
     width:100%;
-    transition:width .2s linear;
+    transition:width .15s linear;
 }
 p{line-height:1.7;}
 </style>
@@ -101,7 +101,7 @@ payphone();
 /* ===== 112 확인 ===== */
 function confirmCall(){
     if(input!=="112"){
-        render("<h2>…</h2><p>연결되지 않는다.</p>");
+        render("<h2>…</h2><p>연결되지 않는다.</p><button onclick='payphone()'>다시 누른다</button>");
         return;
     }
 
@@ -113,7 +113,6 @@ function confirmCall(){
         <p>뚜…</p>
     `);
 
-    // 3초 후 통화 연결 → 효과음 종료
     setTimeout(()=>{
         phoneSfx.pause();
         phoneSfx.currentTime=0;
@@ -157,10 +156,11 @@ function policeCall(){
 function startMiniGame(){
     breath=100;
     survived=0;
+    leavesActive=false;
 
     render(`
         <h2>돌 뒤</h2>
-        <p>소리가 나면 들킨다.</p>
+        <p>소리가 나는 동안엔 숨을 멈춰야 한다.</p>
         <div class="bar"><div class="fill" id="breathBar"></div></div>
         <button id="holdBtn">숨 참기</button>
     `);
@@ -169,7 +169,6 @@ function startMiniGame(){
     btn.onmousedown=()=>holding=true;
     btn.onmouseup=btn.onmouseleave=()=>holding=false;
 
-    // 낙엽 소리: 10초마다, 3~5초
     leavesInterval=setInterval(()=>{
         if(leavesActive) return;
         leavesActive=true;
@@ -205,12 +204,14 @@ function gameLoop(){
         if(breath<=0){
             clearInterval(loop);
             clearInterval(leavesInterval);
+            leavesSfx.pause();
             render("<h2>사망</h2><p>숨이 새어 나갔다.</p>");
         }
 
         if(survived>=60){
             clearInterval(loop);
             clearInterval(leavesInterval);
+            leavesSfx.pause();
             render("<h2>히든 엔딩</h2><p>멀리서 사이렌이 울린다.</p>");
         }
     },200);
