@@ -69,19 +69,21 @@ function policeCall(){
     ];
 
     render("<h2>통화 중</h2>");
+
     let i = 0;
 
     const talk = setInterval(()=>{
-        const p = document.createElement("p");
-        p.innerText = lines[i];
-        game.appendChild(p);
-        i++;
-
-        if(i >= lines.length){
+        if(i < lines.length){
+            const p = document.createElement("p");
+            p.textContent = lines[i];
+            game.appendChild(p);
+            i++;
+        }else{
             clearInterval(talk);
+
             const btn = document.createElement("button");
-            btn.innerText = "돌 뒤에 숨는다";
-            btn.onclick = startMiniGame;
+            btn.textContent = "돌 뒤에 숨는다";
+            btn.addEventListener("click", startMiniGame);
             game.appendChild(btn);
         }
     },1200);
