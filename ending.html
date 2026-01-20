@@ -55,16 +55,36 @@ render("<p>뚜…</p>");
 setTimeout(()=>{ phoneSfx.pause(); policeCall(); },3000);
 };
 
-/* ===== 통화 ===== */
+/* ===== 경찰 통화 ===== */
 function policeCall(){
-render(`
-<p>경찰: 태현씨죠?</p>
-<p>태현: 네? 어떻게 제 이름을…</p>
-<p>경찰?: 공중전화 앞 돌 뒤에 숨어 계세요.</p>
-<p>경찰?: 낙엽 소리 조심하세요.</p>
-<button id="hide">돌 뒤에 숨는다</button>
-`);
-document.getElementById("hide").onclick=startMiniGame;
+    const lines = [
+        "경찰: 태현씨죠?",
+        "태현: 네? 어떻게 제 이름을…",
+        "경찰?: 지금 사건 장소 특정했고 지금 당장 출발하겠습니다.",
+        "경찰?: 10분 정도 예상되네요.",
+        "경찰?: 공중전화 부스 앞쪽에 있는 돌 뒤에 숨어 계세요.",
+        "경찰?: 아, 그리고… 낙엽 밟는 소리 조심하세요.",
+        "태현: 네? …",
+        "뚝—"
+    ];
+
+    render("<h2>통화 중</h2>");
+    let i = 0;
+
+    const talk = setInterval(()=>{
+        const p = document.createElement("p");
+        p.innerText = lines[i];
+        game.appendChild(p);
+        i++;
+
+        if(i >= lines.length){
+            clearInterval(talk);
+            const btn = document.createElement("button");
+            btn.innerText = "돌 뒤에 숨는다";
+            btn.onclick = startMiniGame;
+            game.appendChild(btn);
+        }
+    },1200);
 }
 
 /* ===== 미니게임 ===== */
