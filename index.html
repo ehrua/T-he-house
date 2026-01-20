@@ -51,18 +51,10 @@ if(audioUnlocked) return;
 bgm.play().catch(()=>{});
 audioUnlocked=true;
 }
-function playChase(){
-bgm.pause();
-chaseBgm.currentTime=0;
-chaseBgm.play().catch(()=>{});
-}
-function stopChase(){
-chaseBgm.pause();
-bgm.play().catch(()=>{});
-}
+function playChase(){bgm.pause(); chaseBgm.currentTime=0; chaseBgm.play().catch(()=>{});}
+function stopChase(){chaseBgm.pause(); bgm.play().catch(()=>{});}
 function playHidden(){
-bgm.pause();
-chaseBgm.pause();
+bgm.pause(); chaseBgm.pause();
 hiddenBgm.currentTime=0;
 hiddenBgm.play().catch(()=>{});
 }
@@ -71,12 +63,21 @@ hiddenBgm.play().catch(()=>{});
 const game=document.getElementById("game");
 const state={
 tweezers:false,basementKey:false,safeKey:false,frontKey:false,
-deathReason:"",input:"",history:[]
+caught:0,deathReason:"",input:"",history:[],hunterTimer:null
 };
 
 /* ================== 렌더 ================== */
 function render(html,options=[],back=false){
+clearTimeout(state.hunterTimer);
 game.innerHTML=html;
+
+/* 🔼 납치범 빈도 증가 */
+if(Math.random()<0.45){
+state.hunterTimer=setTimeout(()=>{
+playChase();
+escapeChoice();
+},10000+Math.random()*8000);
+}
 
 if(back&&state.history.length){
 const b=document.createElement("button");
@@ -97,90 +98,103 @@ game.appendChild(btn);
 });
 }
 
-/* ================== PART 0 ================== */
-function part0(){
-render(`
-<div class="part">
-<h2>PART 0 : 새벽의 공원</h2>
-<p>퍽.<br>뒤통수에 둔탁한 충격.</p>
-</div>
-`,[{text:"눈을 뜬다",action:room}]);
+/* ================== 랜덤 납치 ================== */
+function randomHunter(next){
+if(Math.random()<0.3){
+playChase();
+escapeChoice();
+}else next();
 }
 
-/* ================== 방 ================== */
-function room(){
+/* ================== 도망 선택 ================== */
+function escapeChoice(){
+let timer=setTimeout(()=>{
+death("망설이는 사이, 손이 닿았다.");
+},5000);
+
+render(`
+<div class="part">
+<h2>기척</h2>
+<p>뒤에서 숨소리가 겹친다.</p>
+</div>
+`,[
+{text:"화장실",action:()=>{clearTimeout(timer); bathroom();}},
+{text:"거실",action:()=>{clearTimeout(timer); hideChance("거실 소파 뒤");}},
+{text:"지하실",action:()=>{clearTimeout(timer); hideChance("계단 아래");}}
+]);
+}
+
+function bathroom(){
+let timer=setTimeout(()=>{
+death("문을 닫기 전에 들켰다.");
+},5000);
+
+render(`
+<div class="part">
+<h2>화장실</h2>
+</div>
+`,[
+{text:"문 뒤",action:()=>{clearTimeout(timer); hideChance("문 뒤");}},
+{text:"욕조",action:()=>{clearTimeout(timer); hideChance("피로 가득 찬 욕조");}}
+]);
+}
+
+function hideChance(place){
+if(Math.random()<0.5){
 stopChase();
-render(`
-<div class="part">
-<h2>방</h2>
-<p>신문지로 막힌 창문. 잠긴 문.</p>
-</div>
-`,[
-{text:"문",action:door},
-{text:"방 조사",action:searchRoom}
-]);
+render(`<p>${place}에 숨었다… 지나간다.</p>`,[{text:"숨을 고른다",action:secondFloor}]);
+}else{
+death(`${place}에서 발견됐다.`);
+}
 }
 
-function searchRoom(){
-render(`<p>장기 매매 기록… 이름: 판태현</p>`,[
-{text:"서랍",action:()=>{state.tweezers=true; render(`<p>핀셋을 얻었다.</p>`,[{text:"문",action:door}]);}}
-],true);
-}
-
-function door(){
-if(!state.tweezers){
-render(`<p>문이 잠겨 있다.</p>`,[{text:"뒤로",action:room}]);
+/* ================== 현관 비밀번호 수정 ================== */
+function checkDoor(){
+if(!state.frontKey){
+render(`<p>문이 열리지 않는다.</p>`,[{text:"뒤로",action:livingroom}]);
 return;
 }
-render(`<p>문이 열린다.</p>`,[{text:"밖으로",action:secondFloor}]);
+if(state.input==="3849"){
+render(`<p>아무 반응이 없다.</p>`,[{text:"뒤로",action:livingroom}]);
+}else{
+state.deathReason="경보음이 울렸다.";
+playChase(); death();
+}
 }
 
-/* ================== 2층 ================== */
-function secondFloor(){
-render(`<div class="part"><h2>2층</h2></div>`,[
-{text:"서재",action:library},
-{text:"계단",action:kitchen}
-]);
+/* ================== 사망 ================== */
+function death(reason){
+clearTimeout(state.hunterTimer);
+render(`<h2>사망</h2><p>${reason}</p>`);
 }
 
-function library(){
-render(`
-<div class="part"><h2>서재</h2><p>사진과 해부학 책.</p></div>
-`,[
-{text:"메모",action:()=>render(`<p class="memo">TV의 숫자를 기억해라...</p>`,[{text:"뒤로",action:library}])},
-{text:"서랍",action:()=>{state.basementKey=true; render(`<p>지하실 열쇠 획득.</p>`,[{text:"뒤로",action:library}]);}}
-],true);
+/* ===== 이하 기존 흐름 그대로 ===== */
+function part0(){
+render(`<div class="part"><h2>PART 0 : 새벽의 공원</h2><p>퍽.</p></div>`,
+[{text:"눈을 뜬다",action:room}]);
 }
-
-/* ================== 주방 / 거실 ================== */
-function kitchen(){
-render(`<h2>주방</h2>`,[{text:"거실",action:livingroom}]);
-}
-
-function livingroom(){
-render(`<h2>거실</h2>`,[
-{text:"TV",action:()=>render(`<p>TV에는 숫자 3849가 반복된다.</p>`,[{text:"뒤로",action:livingroom}])},
-{text:"지하실",action:basement},
-{text:"현관",action:frontDoor}
-]);
-}
-
-/* ================== 지하실 ================== */
-function basement(){
-if(!state.basementKey){
-render(`<p>잠겨 있다.</p>`,[{text:"뒤로",action:livingroom}]);
-return;
-}
-state.frontKey=true;
-render(`<p>현관 열쇠를 발견했다.</p>`,[{text:"뒤로",action:livingroom}]);
-}
-
-/* ================== 현관 ================== */
-function frontDoor(){
-state.input="";
-drawKeypad("현관 도어락",checkDoor);
-}
-
+function room(){stopChase();render(`<h2>방</h2>`,[
+{text:"문",action:door},{text:"방 조사",action:searchRoom},{text:"가만히",action:()=>escapeChoice()}
+]);}
+function searchRoom(){render(`<p>장기 매매 기록…</p>`,[
+{text:"서랍",action:()=>{state.tweezers=true; render(`<p>핀셋 획득</p>`,[{text:"문",action:door}]);}}
+]);}
+function door(){if(!state.tweezers){render(`<p>잠겨 있다.</p>`,[{text:"뒤로",action:room}]);return;}
+render(`<p>문이 열린다.</p>`,[{text:"밖으로",action:secondFloor}]);}
+function secondFloor(){render(`<h2>2층</h2>`,[
+{text:"서재",action:library},{text:"계단",action:kitchen}
+]);}
+function library(){render(`<h2>서재</h2>`,[
+{text:"서랍",action:()=>{state.basementKey=true; render(`<p>열쇠</p>`,[{text:"뒤로",action:library}]);}}
+]);}
+function kitchen(){render(`<h2>주방</h2>`,[{text:"거실",action:livingroom}]);}
+function livingroom(){render(`<h2>거실</h2>`,[
+{text:"TV",action:()=>render(`<p>3849</p>`,[{text:"뒤로",action:livingroom}])},
+{text:"지하실",action:basement},{text:"현관",action:frontDoor}
+]);}
+function basement(){if(!state.basementKey){render(`<p>잠겨 있다.</p>`,[{text:"뒤로",action:livingroom}]);return;}
+state.frontKey=true; render(`<p>현관 열쇠</p>`,[{text:"뒤로",action:livingroom}]);}
+function frontDoor(){state.input=""; drawKeypad("현관 도어락",checkDoor);}
 function drawKeypad(title,callback){
 render(`<h2>${title}</h2><div class="display">${state.input}</div><div class="keypad" id="pad"></div>`,[],true);
 const pad=document.getElementById("pad");
@@ -194,25 +208,6 @@ const ok=document.createElement("button");
 ok.innerText="확인";
 ok.onclick=callback;
 pad.appendChild(ok);
-}
-
-function checkDoor(){
-if(!state.frontKey){
-render(`<p>문이 열리지 않는다.</p>`,[{text:"뒤로",action:livingroom}]);
-return;
-}
-if(state.input==="3849"){
-render(`<p>잠금이 풀리지 않는다.</p>`,[{text:"뒤로",action:livingroom}]);
-}else{
-render(`<p>경보음이 울린다.</p>`);
-playChase();
-setTimeout(()=>death("문 앞에서 붙잡혔다."),1500);
-}
-}
-
-/* ================== 사망 ================== */
-function death(reason){
-render(`<h2>사망</h2><p>${reason}</p>`);
 }
 
 part0();
